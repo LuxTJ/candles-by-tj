@@ -52,9 +52,11 @@ export function Header({ onCartClick }: HeaderProps) {
           {/* Logo */}
           <Link href="/">
             <div className="flex items-center space-x-2 cursor-pointer">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-orange-500 rounded-lg flex items-center justify-center animate-glow">
-                <Flame className="w-5 h-5 text-white" />
-              </div>
+              <img 
+                src="/attached_assets/Photoroom_20250602_011904.PNG" 
+                alt="Little Luxury Candles Logo" 
+                className="w-10 h-10 rounded-full"
+              />
               <span className="text-2xl font-bold text-foreground">Little Luxury Candles</span>
             </div>
           </Link>
