@@ -230,7 +230,7 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <Leaf className="w-5 h-5 text-green-500" />
-                <span className="text-muted-foreground">100% Natural Soy Wax</span>
+                <span className="text-muted-foreground">100% Natural Wax</span>
               </div>
               {product.burnTime && (
                 <div className="flex items-center space-x-3">

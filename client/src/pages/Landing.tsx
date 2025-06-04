@@ -57,7 +57,7 @@ export default function Landing() {
               
               <p className="text-xl text-muted-foreground leading-relaxed">
                 Transform your space with our premium collection of artisanal candles. 
-                Each candle is carefully hand-poured with natural soy wax and essential oils 
+                Each candle is carefully hand-poured with natural wax and essential oils 
                 to create the perfect ambiance for every moment.
               </p>
               
@@ -108,7 +108,7 @@ export default function Landing() {
               {
                 icon: "🌿",
                 title: "100% Natural",
-                description: "Made with pure soy wax and natural essential oils, free from harmful chemicals and toxins."
+                description: "Made with pure natural wax and essential oils, free from harmful chemicals and toxins."
               },
               {
                 icon: "🤲",

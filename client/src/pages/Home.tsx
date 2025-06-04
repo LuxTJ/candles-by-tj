@@ -67,7 +67,7 @@ export default function Home() {
               </h1>
               
               <p className="text-lg text-muted-foreground leading-relaxed">
-                Discover our collection of premium, hand-poured candles crafted with natural soy wax 
+                Discover our collection of premium, hand-poured candles crafted with natural wax 
                 and essential oils. Each candle tells a story of warmth, comfort, and mindful living.
               </p>
               
@@ -211,7 +211,7 @@ export default function Home() {
               {
                 icon: Leaf,
                 title: "Eco-Friendly",
-                description: "Made with 100% natural soy wax and cotton wicks, our candles are biodegradable and burn cleanly without harmful toxins."
+                description: "Made with 100% natural wax and cotton wicks, our candles are biodegradable and burn cleanly without harmful toxins."
               },
               {
                 icon: Heart,
