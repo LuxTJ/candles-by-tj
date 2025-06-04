@@ -3,68 +3,58 @@
 @tailwind utilities;
 
 :root {
-  --background: 44 13% 98%; /* #FEFDF8 */
-  --foreground: 25 15% 15%; /* #1C1917 */
-  --muted: 44 13% 95%; /* #FEF7ED */
-  --muted-foreground: 25 5% 45%; /* #78716C */
-  --popover: 44 13% 98%; /* #FEFDF8 */
-  --popover-foreground: 25 15% 15%; /* #1C1917 */
-  --card: 0 0% 100%; /* #FFFFFF */
-  --card-foreground: 25 15% 15%; /* #1C1917 */
-  --border: 44 7% 88%; /* #E7E5E4 */
-  --input: 44 7% 88%; /* #E7E5E4 */
-  --primary: 39 100% 50%; /* #F59E0B */
-  --primary-foreground: 39 100% 99%; /* #FFFBEB */
-  --secondary: 44 13% 95%; /* #FEF7ED */
-  --secondary-foreground: 25 15% 15%; /* #1C1917 */
-  --accent: 44 13% 95%; /* #FEF7ED */
-  --accent-foreground: 25 15% 15%; /* #1C1917 */
-  --destructive: 0 84% 60%; /* #EF4444 */
-  --destructive-foreground: 0 0% 98%; /* #FAFAFA */
-  --ring: 39 100% 50%; /* #F59E0B */
-  --radius: 0.75rem;
-  --warm-50: 44 100% 99%; /* #FEFDF8 */
-  --warm-100: 44 80% 97%; /* #FEF3C7 */
-  --warm-200: 44 100% 88%; /* #FDE68A */
-  --warm-300: 44 100% 80%; /* #FCD34D */
-  --warm-400: 39 100% 66%; /* #FBBF24 */
-  --warm-500: 39 100% 50%; /* #F59E0B */
-  --warm-600: 39 100% 42%; /* #D97706 */
-  --warm-700: 39 100% 35%; /* #B45309 */
-  --warm-800: 39 100% 29%; /* #92400E */
-  --warm-900: 39 100% 23%; /* #78350F */
+  --background: 32 6% 97%;
+  --foreground: 20 14.3% 4.1%;
+  --muted: 31 5% 95%;
+  --muted-foreground: 25 5.3% 44.7%;
+  --popover: 32 6% 97%;
+  --popover-foreground: 20 14.3% 4.1%;
+  --card: 32 6% 97%;
+  --card-foreground: 20 14.3% 4.1%;
+  --border: 31 5% 90%;
+  --input: 31 5% 90%;
+  --primary: 31 87% 51%;
+  --primary-foreground: 33 100% 96%;
+  --secondary: 31 5% 95%;
+  --secondary-foreground: 24 9.8% 10%;
+  --accent: 31 5% 95%;
+  --accent-foreground: 24 9.8% 10%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 20 14.3% 4.1%;
+  --radius: 0.5rem;
+  --chart-1: 12 76% 61%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 197 37% 24%;
+  --chart-4: 43 74% 66%;
+  --chart-5: 27 87% 67%;
 }
 
 .dark {
-  --background: 240 10% 3.9%; /* #020617 */
-  --foreground: 0 0% 98%; /* #F8FAFC */
-  --muted: 240 3.7% 15.9%; /* #1E293B */
-  --muted-foreground: 240 5% 64.9%; /* #94A3B8 */
-  --popover: 240 10% 3.9%; /* #020617 */
-  --popover-foreground: 0 0% 98%; /* #F8FAFC */
-  --card: 240 10% 3.9%; /* #020617 */
-  --card-foreground: 0 0% 98%; /* #F8FAFC */
-  --border: 240 3.7% 15.9%; /* #1E293B */
-  --input: 240 3.7% 15.9%; /* #1E293B */
-  --primary: 39 100% 50%; /* #F59E0B */
-  --primary-foreground: 39 100% 99%; /* #FFFBEB */
-  --secondary: 240 3.7% 15.9%; /* #1E293B */
-  --secondary-foreground: 0 0% 98%; /* #F8FAFC */
-  --accent: 240 3.7% 15.9%; /* #1E293B */
-  --accent-foreground: 0 0% 98%; /* #F8FAFC */
-  --destructive: 0 62.8% 30.6%; /* #B91C1C */
-  --destructive-foreground: 0 0% 98%; /* #F8FAFC */
-  --ring: 39 100% 50%; /* #F59E0B */
-  --warm-50: 240 5% 6%; /* #0F172A */
-  --warm-100: 240 6% 10%; /* #1E293B */
-  --warm-200: 240 5% 15%; /* #334155 */
-  --warm-300: 240 5% 26%; /* #475569 */
-  --warm-400: 240 4% 46%; /* #64748B */
-  --warm-500: 240 5% 65%; /* #94A3B8 */
-  --warm-600: 240 6% 83%; /* #CBD5E1 */
-  --warm-700: 240 9% 89%; /* #E2E8F0 */
-  --warm-800: 240 23% 95%; /* #F1F5F9 */
-  --warm-900: 240 33% 98%; /* #F8FAFC */
+  --background: 20 14.3% 4.1%;
+  --foreground: 32 6% 97%;
+  --muted: 12 6.5% 15.1%;
+  --muted-foreground: 24 5.4% 63.9%;
+  --popover: 20 14.3% 4.1%;
+  --popover-foreground: 32 6% 97%;
+  --card: 20 14.3% 4.1%;
+  --card-foreground: 32 6% 97%;
+  --border: 12 6.5% 15.1%;
+  --input: 12 6.5% 15.1%;
+  --primary: 31 87% 51%;
+  --primary-foreground: 33 100% 96%;
+  --secondary: 12 6.5% 15.1%;
+  --secondary-foreground: 32 6% 97%;
+  --accent: 12 6.5% 15.1%;
+  --accent-foreground: 32 6% 97%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 32 6% 97%;
+  --ring: 24 5.7% 82.9%;
+  --chart-1: 220 70% 50%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
 }
 
 @layer base {
@@ -73,61 +63,42 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
   }
 }
 
-@layer utilities {
-  .text-warm-50 { color: hsl(var(--warm-50)); }
-  .text-warm-100 { color: hsl(var(--warm-100)); }
-  .text-warm-200 { color: hsl(var(--warm-200)); }
-  .text-warm-300 { color: hsl(var(--warm-300)); }
-  .text-warm-400 { color: hsl(var(--warm-400)); }
-  .text-warm-500 { color: hsl(var(--warm-500)); }
-  .text-warm-600 { color: hsl(var(--warm-600)); }
-  .text-warm-700 { color: hsl(var(--warm-700)); }
-  .text-warm-800 { color: hsl(var(--warm-800)); }
-  .text-warm-900 { color: hsl(var(--warm-900)); }
+@layer components {
+  .candle-glow {
+    box-shadow: 0 0 20px rgba(251, 146, 60, 0.3), 0 0 40px rgba(251, 146, 60, 0.1);
+  }
+  
+  .candle-glow-hover:hover {
+    box-shadow: 0 0 30px rgba(251, 146, 60, 0.5), 0 0 60px rgba(251, 146, 60, 0.2);
+    transition: box-shadow 0.3s ease;
+  }
 
-  .bg-warm-50 { background-color: hsl(var(--warm-50)); }
-  .bg-warm-100 { background-color: hsl(var(--warm-100)); }
-  .bg-warm-200 { background-color: hsl(var(--warm-200)); }
-  .bg-warm-300 { background-color: hsl(var(--warm-300)); }
-  .bg-warm-400 { background-color: hsl(var(--warm-400)); }
-  .bg-warm-500 { background-color: hsl(var(--warm-500)); }
-  .bg-warm-600 { background-color: hsl(var(--warm-600)); }
-  .bg-warm-700 { background-color: hsl(var(--warm-700)); }
-  .bg-warm-800 { background-color: hsl(var(--warm-800)); }
-  .bg-warm-900 { background-color: hsl(var(--warm-900)); }
+  .warm-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(32 100% 65%) 100%);
+  }
 
-  .border-warm-200 { border-color: hsl(var(--warm-200)); }
-  .border-warm-300 { border-color: hsl(var(--warm-300)); }
-  .border-warm-700 { border-color: hsl(var(--warm-700)); }
-
-  .animate-glow {
-    animation: glow 2s ease-in-out infinite alternate;
+  .warm-text-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(32 100% 65%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .animate-flicker {
     animation: flicker 2s ease-in-out infinite alternate;
   }
 
-  @keyframes glow {
-    0% {
-      box-shadow: 0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary)), 0 0 15px hsl(var(--primary));
-    }
-    100% {
-      box-shadow: 0 0 10px hsl(var(--primary)), 0 0 20px hsl(var(--primary)), 0 0 30px hsl(var(--primary));
-    }
-  }
-
   @keyframes flicker {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.8;
-    }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
   }
 }
