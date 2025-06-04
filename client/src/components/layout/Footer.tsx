@@ -37,7 +37,7 @@ export function Footer() {
                 <div className="w-8 h-8 bg-gradient-to-br from-primary to-orange-500 rounded-lg flex items-center justify-center">
                   <Flame className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-2xl font-bold">Lumient</span>
+                <span className="text-2xl font-bold">Little Luxury Candles</span>
               </div>
             </Link>
             
@@ -118,7 +118,7 @@ export function Footer() {
         {/* Bottom Section */}
         <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-400 text-sm">
-            &copy; {currentYear} Lumient. All rights reserved.
+            &copy; {currentYear} Little Luxury Candles. All rights reserved.
           </p>
           
           <div className="flex space-x-6 mt-4 md:mt-0">

@@ -55,7 +55,7 @@ export function Header({ onCartClick }: HeaderProps) {
               <div className="w-8 h-8 bg-gradient-to-br from-primary to-orange-500 rounded-lg flex items-center justify-center animate-glow">
                 <Flame className="w-5 h-5 text-white" />
               </div>
-              <span className="text-2xl font-bold text-foreground">Lumient</span>
+              <span className="text-2xl font-bold text-foreground">Little Luxury Candles</span>
             </div>
           </Link>
 

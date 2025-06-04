@@ -16,7 +16,7 @@ export default function Landing() {
               <div className="w-8 h-8 bg-gradient-to-br from-primary to-orange-500 rounded-lg flex items-center justify-center animate-glow">
                 <Flame className="w-5 h-5 text-white" />
               </div>
-              <span className="text-2xl font-bold text-foreground">Lumient</span>
+              <span className="text-2xl font-bold text-foreground">Little Luxury Candles</span>
             </div>
             
             <div className="flex items-center space-x-4">
@@ -96,7 +96,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-              Why Candle Lovers Choose Lumient
+              Why Candle Lovers Choose Little Luxury Candles
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Experience the difference of premium, handcrafted candles made with care and attention to detail
