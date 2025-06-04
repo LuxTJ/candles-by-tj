@@ -1,119 +1,176 @@
-import { useState, useEffect, createContext, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CartItem, Product, InsertCartItem } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import type { CartItemWithProduct, AddToCartData, CartSummary } from "@/lib/types";
 
-interface CartContextType {
-  cartItems: (CartItem & { product: Product })[];
-  isCartOpen: boolean;
-  toggleCart: () => void;
-  addToCart: (item: Omit<InsertCartItem, "sessionId">) => Promise<void>;
-  updateQuantity: (id: number, quantity: number) => Promise<void>;
-  removeFromCart: (id: number) => Promise<void>;
-  clearCart: () => Promise<void>;
-  getTotalPrice: () => number;
-  getTotalItems: () => number;
-}
-
-const CartContext = createContext<CartContextType | undefined>(undefined);
-
-export function useCart(): CartContextType {
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [sessionId] = useState(() => {
-    // Get or create session ID for guest users
-    let id = localStorage.getItem("cartSessionId");
-    if (!id) {
-      id = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem("cartSessionId", id);
-    }
-    return id;
-  });
-
+export function useCart() {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get cart items
-  const { data: cartItems = [] } = useQuery<(CartItem & { product: Product })[]>({
-    queryKey: [`/api/cart/${sessionId}`],
-    staleTime: 0, // Always fetch fresh cart data
+  const { data: cartItems = [], isLoading, error } = useQuery<CartItemWithProduct[]>({
+    queryKey: ['/api/cart'],
+    retry: false,
   });
 
-  // Add to cart mutation
   const addToCartMutation = useMutation({
-    mutationFn: async (item: Omit<InsertCartItem, "sessionId">) => {
-      await apiRequest("POST", "/api/cart", { ...item, sessionId });
+    mutationFn: async (data: AddToCartData) => {
+      await apiRequest('POST', '/api/cart', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/cart/${sessionId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      toast({
+        title: "Added to cart",
+        description: "Item has been added to your cart",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
-  // Update quantity mutation
   const updateQuantityMutation = useMutation({
     mutationFn: async ({ id, quantity }: { id: number; quantity: number }) => {
-      await apiRequest("PUT", `/api/cart/${id}`, { quantity });
+      await apiRequest('PUT', `/api/cart/${id}`, { quantity });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/cart/${sessionId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update cart item",
+        variant: "destructive",
+      });
     },
   });
 
-  // Remove from cart mutation
-  const removeFromCartMutation = useMutation({
+  const removeItemMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/cart/${id}`);
+      await apiRequest('DELETE', `/api/cart/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/cart/${sessionId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      toast({
+        title: "Item removed",
+        description: "Item has been removed from your cart",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to remove item from cart",
+        variant: "destructive",
+      });
     },
   });
 
-  // Clear cart mutation
   const clearCartMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("DELETE", `/api/cart/session/${sessionId}`);
+      await apiRequest('DELETE', '/api/cart');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/cart/${sessionId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      toast({
+        title: "Cart cleared",
+        description: "All items have been removed from your cart",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to clear cart",
+        variant: "destructive",
+      });
     },
   });
 
-  const toggleCart = () => setIsCartOpen(!isCartOpen);
-
-  const addToCart = async (item: Omit<InsertCartItem, "sessionId">) => {
-    await addToCartMutation.mutateAsync(item);
+  // Calculate price for a cart item including variants
+  const calculateItemPrice = (item: CartItemWithProduct) => {
+    const sizeVariant = item.selectedVariants?.size;
+    if (sizeVariant && item.product.variants?.size) {
+      const variant = item.product.variants.size.find(v => v.name === sizeVariant);
+      return variant ? variant.price : parseFloat(item.product.basePrice);
+    }
+    return parseFloat(item.product.basePrice);
   };
 
-  const updateQuantity = async (id: number, quantity: number) => {
-    await updateQuantityMutation.mutateAsync({ id, quantity });
+  // Calculate cart summary
+  const cartSummary: CartSummary = {
+    totalItems: cartItems.reduce((total, item) => total + item.quantity, 0),
+    subtotal: cartItems.reduce((total, item) => {
+      return total + (calculateItemPrice(item) * item.quantity);
+    }, 0),
+    shipping: 0,
+    total: 0,
   };
 
-  const removeFromCart = async (id: number) => {
-    await removeFromCartMutation.mutateAsync(id);
-  };
-
-  const clearCart = async () => {
-    await clearCartMutation.mutateAsync();
-  };
-
-  const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => {
-      return total + parseFloat(item.product.price) * item.quantity;
-    }, 0);
-  };
-
-  const getTotalItems = () => {
-    return cartItems.reduce((total, item) => total + item.quantity, 0);
-  };
+  // Calculate shipping (free over $50)
+  cartSummary.shipping = cartSummary.subtotal >= 50 ? 0 : 9.99;
+  cartSummary.total = cartSummary.subtotal + cartSummary.shipping;
 
   return {
     cartItems,
-    isCartOpen,
-    toggleCart,
-    addToCart,
-    updateQuantity,
-    removeFromCart,
-    clearCart,
-    getTotalPrice,
-    getTotalItems,
+    cartSummary,
+    totalItems: cartSummary.totalItems,
+    isLoading,
+    error,
+    addToCart: addToCartMutation.mutate,
+    updateQuantity: updateQuantityMutation.mutate,
+    removeItem: removeItemMutation.mutate,
+    clearCart: clearCartMutation.mutate,
+    calculateItemPrice,
+    isAddingToCart: addToCartMutation.isPending,
+    isUpdating: updateQuantityMutation.isPending,
+    isRemoving: removeItemMutation.isPending,
+    isClearing: clearCartMutation.isPending,
   };
 }

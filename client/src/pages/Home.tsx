@@ -1,91 +1,80 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
-import Header from "@/components/Header";
-import ProductCard from "@/components/ProductCard";
-import CartSidebar from "@/components/CartSidebar";
-import Newsletter from "@/components/Newsletter";
+import { useQuery } from "@tanstack/react-query";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
+import { ProductCard } from "@/components/ProductCard";
+import { ProductFilters } from "@/components/ProductFilters";
+import { ShoppingCart } from "@/components/ShoppingCart";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { Search, Filter, Star, Leaf, Heart, Truck, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { Flame, Leaf, Heart, Clock, Star, ArrowRight } from "lucide-react";
+import type { Product } from "@/lib/types";
 
 export default function Home() {
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const { toast } = useToast();
-
-  // Fetch products
-  const { data: productsData, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ["/api/products", { category: selectedCategory, search: searchQuery, featured: true, limit: 8 }],
+  const [cartOpen, setCartOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    category: '',
+    scent: '',
+    search: '',
+    sortBy: 'newest' as const,
+    sortOrder: 'desc' as const,
   });
 
-  // Fetch categories
-  const { data: categories } = useQuery({
-    queryKey: ["/api/categories"],
-  });
-
-  // Newsletter subscription mutation
-  const newsletterMutation = useMutation({
-    mutationFn: async (email: string) => {
-      await apiRequest("POST", "/api/newsletter/subscribe", { email });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success!",
-        description: "You've been subscribed to our newsletter.",
+  const { data: products, isLoading } = useQuery<Product[]>({
+    queryKey: ['/api/products', filters],
+    queryFn: async () => {
+      const searchParams = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) searchParams.append(key, value);
       });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to subscribe. Please try again.",
-        variant: "destructive",
-      });
+      
+      const response = await fetch(`/api/products?${searchParams}`);
+      if (!response.ok) throw new Error('Failed to fetch products');
+      return response.json();
     },
   });
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Search is automatically triggered by the query key change
-  };
-
-  const handleNewsletterSignup = (email: string) => {
-    newsletterMutation.mutate(email);
-  };
+  const { data: featuredProducts } = useQuery<Product[]>({
+    queryKey: ['/api/products', { featured: true }],
+    queryFn: async () => {
+      const response = await fetch('/api/products?featured=true&limit=4');
+      if (!response.ok) throw new Error('Failed to fetch featured products');
+      return response.json();
+    },
+  });
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onCartToggle={() => setIsCartOpen(!isCartOpen)} />
+      <Header onCartClick={() => setCartOpen(true)} />
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-orange-500/10" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-900">
+        <div className="absolute inset-0 bg-black/5 dark:bg-black/20"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="space-y-4">
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-                  Handcrafted
-                  <span className="warm-text-gradient block">Luminous</span>
-                  Moments
-                </h1>
-                <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl">
-                  Transform your space with our premium collection of artisanal candles, each carefully crafted to create the perfect ambiance for every moment.
-                </p>
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 text-primary animate-flicker">
+                <Flame className="w-6 h-6" />
+                <span className="text-sm font-medium">Handcrafted with Love</span>
               </div>
+              
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
+                Illuminate Your
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-500 block">
+                  Sacred Spaces
+                </span>
+              </h1>
+              
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Discover our collection of premium, hand-poured candles crafted with natural soy wax 
+                and essential oils. Each candle tells a story of warmth, comfort, and mindful living.
+              </p>
+              
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                  size="lg" 
-                  className="warm-gradient text-white hover:opacity-90 candle-glow-hover"
-                  onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}
-                >
+                <Button size="lg" className="animate-glow">
                   Shop Collection
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
                 <Button variant="outline" size="lg">
                   Our Story
@@ -95,14 +84,14 @@ export default function Home() {
             
             <div className="relative">
               <img 
-                src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600" 
-                alt="Elegant candle collection" 
-                className="rounded-2xl shadow-2xl w-full candle-glow" 
+                src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600" 
+                alt="Beautiful handcrafted candles"
+                className="w-full h-96 lg:h-[500px] object-cover rounded-2xl shadow-2xl"
               />
               <div className="absolute -bottom-6 -left-6 bg-card p-6 rounded-xl shadow-xl border">
                 <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-sm font-medium">Hand-poured with love</span>
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium">100% Natural Ingredients</span>
                 </div>
               </div>
             </div>
@@ -111,162 +100,109 @@ export default function Home() {
       </section>
 
       {/* Featured Collections */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Collections</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+              Explore Our Collections
+            </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Curated collections for every mood and occasion
+              From aromatherapy to seasonal scents, discover candles crafted for every mood and moment
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                title: "Zen & Relaxation",
-                description: "Calming scents for mindful moments",
-                image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400",
-                badge: "Popular",
-                category: "Aromatherapy"
+                title: "Aromatherapy",
+                description: "Essential oil blends for wellness",
+                icon: Leaf,
+                color: "from-green-100 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20",
+                iconColor: "text-green-600 dark:text-green-400"
               },
               {
-                title: "Seasonal Favorites", 
-                description: "Limited editions for special times",
-                image: "https://images.unsplash.com/photo-1576020799627-aeac74d58064?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400",
-                badge: "New",
-                category: "Seasonal"
+                title: "Seasonal",
+                description: "Limited edition scents for every season",
+                icon: Star,
+                color: "from-orange-100 to-red-100 dark:from-orange-900/20 dark:to-red-900/20",
+                iconColor: "text-orange-600 dark:text-orange-400"
               },
               {
-                title: "Luxury Line",
-                description: "Premium candles for discerning tastes",
-                image: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400",
-                badge: "Premium",
-                category: "Luxury"
+                title: "Luxury",
+                description: "Premium wax blends with exotic fragrances",
+                icon: Heart,
+                color: "from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20",
+                iconColor: "text-purple-600 dark:text-purple-400"
               }
-            ].map((collection, index) => (
-              <Card 
-                key={index} 
-                className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer"
-                onClick={() => setSelectedCategory(collection.category)}
+            ].map((collection) => (
+              <div 
+                key={collection.title}
+                className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${collection.color} p-8 h-80 flex flex-col justify-between group cursor-pointer transform hover:scale-105 transition-all duration-300`}
               >
-                <div className="relative overflow-hidden">
-                  <img 
-                    src={collection.image} 
-                    alt={collection.title}
-                    className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <Badge className="absolute top-4 left-4">{collection.badge}</Badge>
-                  <div className="absolute bottom-6 left-6 text-white">
-                    <h3 className="text-2xl font-bold mb-2">{collection.title}</h3>
-                    <p className="text-gray-200 mb-3">{collection.description}</p>
-                    <Button variant="secondary" size="sm">
-                      Explore Collection <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
+                <div>
+                  <collection.icon className={`w-12 h-12 ${collection.iconColor} mb-4`} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-foreground mb-2">{collection.title}</h3>
+                  <p className="text-muted-foreground mb-4">{collection.description}</p>
+                  <div className={`${collection.iconColor} font-semibold flex items-center group-hover:translate-x-1 transition-transform`}>
+                    Shop Collection <ArrowRight className="w-4 h-4 ml-2" />
                   </div>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Featured Products */}
-      <section id="products" className="py-20">
+      <section className="py-16 lg:py-24 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-12">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-2">Featured Products</h2>
-              <p className="text-muted-foreground">Handpicked favorites from our artisan collection</p>
-            </div>
-            <Link href="/products">
-              <Button variant="outline" className="hidden md:flex items-center gap-2">
-                View All Products <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+              Bestselling Candles
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Discover customer favorites that bring warmth and ambiance to any space
+            </p>
           </div>
 
-          {/* Search and Filter */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-8">
-            <form onSubmit={handleSearch} className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Search candles..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </form>
-            
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={selectedCategory === "" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory("")}
-              >
-                All
-              </Button>
-              {categories?.map((category: string) => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category)}
-                >
-                  {category}
-                </Button>
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="space-y-4">
+                  <Skeleton className="w-full h-64 rounded-2xl" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
               ))}
             </div>
-          </div>
-
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {isLoadingProducts ? (
-              Array.from({ length: 8 }).map((_, index) => (
-                <Card key={index} className="overflow-hidden">
-                  <Skeleton className="w-full h-64" />
-                  <CardContent className="p-6">
-                    <Skeleton className="h-4 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-1/2 mb-4" />
-                    <div className="flex justify-between items-center">
-                      <Skeleton className="h-6 w-16" />
-                      <Skeleton className="h-10 w-24" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              productsData?.products?.map((product: any) => (
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {featuredProducts?.map((product) => (
                 <ProductCard key={product.id} product={product} />
-              ))
-            )}
-          </div>
-
-          {!isLoadingProducts && productsData?.products?.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg">No products found matching your criteria.</p>
+              ))}
             </div>
           )}
 
           <div className="text-center mt-12">
-            <Link href="/products">
-              <Button variant="outline" size="lg">
-                View All Products
-              </Button>
-            </Link>
+            <Button variant="outline" size="lg">
+              View All Products
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 bg-muted/30">
+      {/* Values Section */}
+      <section className="py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose Lumient</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+              Why Choose Lumient
+            </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Committed to quality, sustainability, and creating moments of joy
+              Every candle is crafted with passion, sustainability, and attention to detail
             </p>
           </div>
 
@@ -274,88 +210,109 @@ export default function Home() {
             {[
               {
                 icon: Leaf,
-                title: "100% Natural",
-                description: "Made with pure soy wax and natural essential oils, free from harmful chemicals and toxins."
+                title: "Eco-Friendly",
+                description: "Made with 100% natural soy wax and cotton wicks, our candles are biodegradable and burn cleanly without harmful toxins."
               },
               {
                 icon: Heart,
-                title: "Handcrafted Quality", 
-                description: "Each candle is carefully hand-poured by skilled artisans with attention to every detail."
+                title: "Handcrafted",
+                description: "Each candle is lovingly hand-poured in small batches, ensuring consistent quality and unique character in every piece."
               },
               {
-                icon: Truck,
-                title: "Fast & Free Shipping",
-                description: "Enjoy free shipping on orders over $50 with careful packaging to ensure perfect delivery."
+                icon: Clock,
+                title: "Long-Lasting",
+                description: "Our premium wax blend provides up to 60 hours of burn time, giving you exceptional value and extended enjoyment."
               }
-            ].map((feature, index) => (
-              <div key={index} className="text-center group">
-                <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-orange-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <feature.icon className="w-8 h-8 text-primary" />
+            ].map((value) => (
+              <div key={value.title} className="text-center group">
+                <div className="w-16 h-16 mx-auto mb-6 p-4 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors duration-300">
+                  <value.icon className="w-8 h-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+                <h3 className="text-xl font-semibold text-foreground mb-3">{value.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{value.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Newsletter Section */}
-      <Newsletter onSignup={handleNewsletterSignup} isLoading={newsletterMutation.isPending} />
-
-      {/* Footer */}
-      <footer className="bg-card border-t">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Brand */}
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center space-x-2 mb-6">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary to-orange-500 rounded-lg flex items-center justify-center">
-                  <div className="w-5 h-5 text-white">🕯️</div>
-                </div>
-                <span className="text-2xl font-bold warm-text-gradient">Lumient</span>
+      {/* All Products Section */}
+      <section className="py-16 lg:py-24 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row gap-8">
+            <div className="w-full lg:w-1/4">
+              <ProductFilters filters={filters} onFiltersChange={setFilters} />
+            </div>
+            
+            <div className="w-full lg:w-3/4">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-bold text-foreground">All Products</h2>
+                <Badge variant="secondary">
+                  {products?.length || 0} products
+                </Badge>
               </div>
-              <p className="text-muted-foreground mb-6 max-w-md leading-relaxed">
-                Illuminating homes with handcrafted candles that transform ordinary moments into extraordinary experiences.
-              </p>
-            </div>
-
-            {/* Quick Links */}
-            <div>
-              <h3 className="font-semibold text-lg mb-6">Quick Links</h3>
-              <ul className="space-y-3">
-                <li><Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Home</Link></li>
-                <li><Link href="/products" className="text-muted-foreground hover:text-primary transition-colors">Products</Link></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">About Us</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Contact</a></li>
-              </ul>
-            </div>
-
-            {/* Customer Care */}
-            <div>
-              <h3 className="font-semibold text-lg mb-6">Customer Care</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Shipping Info</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Returns</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">FAQ</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Care Instructions</a></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-muted-foreground text-sm">
-              © 2024 Lumient. All rights reserved.
-            </p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              <a href="#" className="text-muted-foreground hover:text-primary text-sm transition-colors">Privacy Policy</a>
-              <a href="#" className="text-muted-foreground hover:text-primary text-sm transition-colors">Terms of Service</a>
+              
+              {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="space-y-4">
+                      <Skeleton className="w-full h-64 rounded-2xl" />
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {products?.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
+              
+              {products && products.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No products found matching your criteria.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </footer>
+      </section>
 
-      <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      {/* Newsletter Section */}
+      <section className="py-16 lg:py-24 bg-gradient-to-br from-primary to-orange-600">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="mb-8">
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
+              Stay in the Glow
+            </h2>
+            <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto">
+              Subscribe for exclusive offers, new launches, and candle care tips. Get 15% off your first order!
+            </p>
+          </div>
+          
+          <div className="max-w-md mx-auto">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <input 
+                type="email" 
+                placeholder="Enter your email address" 
+                className="flex-1 px-6 py-4 rounded-xl border-0 text-foreground bg-white focus:ring-2 focus:ring-white/20 outline-none"
+              />
+              <Button className="bg-white text-primary hover:bg-white/90 px-8 py-4 rounded-xl font-semibold">
+                Subscribe
+              </Button>
+            </div>
+            <p className="text-sm text-primary-foreground/60 mt-4">
+              No spam, unsubscribe at any time. We respect your privacy.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+      <ShoppingCart isOpen={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   );
 }

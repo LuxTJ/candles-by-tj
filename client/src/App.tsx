@@ -9,7 +9,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Home from "@/pages/Home";
 import ProductPage from "@/pages/ProductPage";
-import Cart from "@/pages/Cart";
+import CartPage from "@/pages/CartPage";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -21,8 +21,8 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Home} />
-          <Route path="/product/:id" component={ProductPage} />
-          <Route path="/cart" component={Cart} />
+          <Route path="/products/:id" component={ProductPage} />
+          <Route path="/cart" component={CartPage} />
         </>
       )}
       <Route component={NotFound} />
