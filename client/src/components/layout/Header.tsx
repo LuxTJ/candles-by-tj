@@ -53,7 +53,7 @@ export function Header({ onCartClick }: HeaderProps) {
           <Link href="/">
             <div className="flex items-center space-x-2 cursor-pointer">
               <img 
-                src="/attached_assets/Photoroom_20250602_011904.PNG" 
+                src="/logo.png" 
                 alt="Little Luxury Candles Logo" 
                 className="w-10 h-10 rounded-full"
               />
