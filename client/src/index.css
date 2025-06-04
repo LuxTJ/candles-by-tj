@@ -3,72 +3,64 @@
 @tailwind utilities;
 
 :root {
-  --background: 38 36 48%;
-  --foreground: 22 22 11%;
-  --muted: 38 11% 95%;
-  --muted-foreground: 22 11% 45%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 22 22 11%;
-  --card: 0 0% 100%;
-  --card-foreground: 22 22 11%;
-  --border: 22 11% 89%;
-  --input: 22 11% 89%;
-  --primary: 22 82% 39%;
-  --primary-foreground: 36 45% 95%;
-  --secondary: 38 11% 95%;
-  --secondary-foreground: 22 11% 11%;
-  --accent: 38 11% 95%;
-  --accent-foreground: 22 11% 11%;
+  --background: 40 8% 98%;
+  --foreground: 25 5% 15%;
+  --muted: 40 6% 93%;
+  --muted-foreground: 25 5% 44%;
+  --popover: 40 8% 98%;
+  --popover-foreground: 25 5% 15%;
+  --card: 40 8% 98%;
+  --card-foreground: 25 5% 15%;
+  --border: 40 6% 88%;
+  --input: 40 6% 88%;
+  --primary: 35 91% 51%;
+  --primary-foreground: 210 100% 99%;
+  --secondary: 40 6% 93%;
+  --secondary-foreground: 25 5% 15%;
+  --accent: 40 6% 93%;
+  --accent-foreground: 25 5% 15%;
   --destructive: 0 84% 60%;
-  --destructive-foreground: 36 45% 95%;
-  --ring: 22 82% 39%;
-  --radius: 0.75rem;
+  --destructive-foreground: 60 9% 98%;
+  --ring: 35 91% 51%;
+  --radius: 0.5rem;
   
-  /* Warm candle-inspired colors */
-  --warm-50: 33 100% 96%;
-  --warm-100: 34 57% 92%;
-  --warm-200: 32 47% 83%;
-  --warm-300: 31 41% 72%;
-  --warm-400: 30 37% 59%;
-  --warm-500: 25 31% 44%;
-  --warm-600: 20 25% 35%;
-  --warm-700: 20 23% 25%;
-  --warm-800: 24 20% 15%;
-  --warm-900: 24 24% 10%;
+  /* Candle-specific colors */
+  --warm-50: 40 100% 97%;
+  --warm-100: 40 46% 92%;
+  --warm-200: 39 39% 82%;
+  --warm-300: 37 29% 70%;
+  --warm-400: 33 25% 54%;
+  --warm-500: 30 25% 39%;
+  --warm-600: 28 25% 32%;
+  --warm-700: 26 24% 25%;
+  --warm-800: 25 24% 20%;
+  --warm-900: 24 24% 15%;
   
-  /* Primary amber/candle flame colors */
-  --primary-50: 43 96% 89%;
-  --primary-100: 37 92% 81%;
-  --primary-200: 32 95% 68%;
-  --primary-300: 26 90% 56%;
-  --primary-400: 25 95% 53%;
-  --primary-500: 22 82% 39%;
-  --primary-600: 20 91% 33%;
-  --primary-700: 18 81% 27%;
-  --primary-800: 17 63% 23%;
-  --primary-900: 15 52% 18%;
+  --flame-orange: 25 95% 53%;
+  --candle-cream: 45 29% 88%;
+  --wick-brown: 25 24% 20%;
 }
 
 .dark {
-  --background: 24 24% 10%;
-  --foreground: 36 45% 95%;
-  --muted: 24 20% 15%;
-  --muted-foreground: 24 11% 64%;
-  --popover: 24 24% 10%;
-  --popover-foreground: 36 45% 95%;
-  --card: 24 24% 10%;
-  --card-foreground: 36 45% 95%;
-  --border: 24 20% 15%;
-  --input: 24 20% 15%;
-  --primary: 25 95% 53%;
-  --primary-foreground: 24 24% 10%;
-  --secondary: 24 20% 15%;
-  --secondary-foreground: 36 45% 95%;
-  --accent: 24 20% 15%;
-  --accent-foreground: 36 45% 95%;
-  --destructive: 0 62% 31%;
-  --destructive-foreground: 36 45% 95%;
-  --ring: 25 95% 53%;
+  --background: 25 24% 10%;
+  --foreground: 40 8% 90%;
+  --muted: 25 24% 15%;
+  --muted-foreground: 40 8% 60%;
+  --popover: 25 24% 10%;
+  --popover-foreground: 40 8% 90%;
+  --card: 25 24% 10%;
+  --card-foreground: 40 8% 90%;
+  --border: 25 24% 20%;
+  --input: 25 24% 20%;
+  --primary: 35 91% 51%;
+  --primary-foreground: 210 100% 99%;
+  --secondary: 25 24% 15%;
+  --secondary-foreground: 40 8% 90%;
+  --accent: 25 24% 15%;
+  --accent-foreground: 40 8% 90%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 60 9% 98%;
+  --ring: 35 91% 51%;
 }
 
 @layer base {
@@ -80,62 +72,20 @@
     @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
-
-  html {
-    scroll-behavior: smooth;
-  }
 }
 
 @layer components {
   .candle-glow {
-    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
-    animation: glow 2s ease-in-out infinite alternate;
-  }
-
-  .candle-flicker {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
     animation: flicker 2s ease-in-out infinite alternate;
   }
-
-  @keyframes glow {
-    0%, 100% { 
-      box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
-    }
-    50% { 
-      box-shadow: 0 0 25px rgba(245, 158, 11, 0.6);
-    }
+  
+  .warm-gradient {
+    background: linear-gradient(135deg, hsl(var(--warm-100)), hsl(var(--warm-200)));
   }
-
-  @keyframes flicker {
-    0%, 100% { 
-      opacity: 1;
-    }
-    50% { 
-      opacity: 0.8;
-    }
-  }
-
-  .fade-in {
-    animation: fadeIn 0.5s ease-in-out;
-  }
-
-  .slide-up {
-    animation: slideUp 0.6s ease-out;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  @keyframes slideUp {
-    from { 
-      transform: translateY(30px);
-      opacity: 0;
-    }
-    to { 
-      transform: translateY(0);
-      opacity: 1;
-    }
+  
+  .dark .warm-gradient {
+    background: linear-gradient(135deg, hsl(var(--warm-800)), hsl(var(--warm-900)));
   }
 }
 
@@ -143,4 +93,63 @@
   .text-balance {
     text-wrap: balance;
   }
+}
+
+@keyframes flicker {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.5);
 }

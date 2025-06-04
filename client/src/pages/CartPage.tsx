@@ -1,96 +1,51 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
-import type { CartItemWithProduct } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function CartPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, authLoading, toast]);
-
-  const { data: cartItems = [], isLoading: loadingCart } = useQuery<CartItemWithProduct[]>({
+  const { data: cartItems = [], isLoading } = useQuery({
     queryKey: ["/api/cart"],
-    enabled: isAuthenticated,
-    retry: false,
   });
 
   const updateQuantityMutation = useMutation({
-    mutationFn: async ({ id, quantity }: { id: number; quantity: number }) => {
-      return apiRequest("PUT", `/api/cart/${id}`, { quantity });
+    mutationFn: async ({ itemId, quantity }: { itemId: number; quantity: number }) => {
+      await apiRequest("PUT", `/api/cart/${itemId}`, { quantity });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
     },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to update item quantity.",
+        description: "Failed to update item quantity",
         variant: "destructive",
       });
     },
   });
 
   const removeItemMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/cart/${id}`);
+    mutationFn: async (itemId: number) => {
+      await apiRequest("DELETE", `/api/cart/${itemId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       toast({
-        title: "Item Removed",
-        description: "Item has been removed from your cart.",
+        title: "Item removed",
+        description: "Item has been removed from your cart",
       });
     },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to remove item from cart.",
+        description: "Failed to remove item from cart",
         variant: "destructive",
       });
     },
@@ -98,69 +53,60 @@ export default function CartPage() {
 
   const clearCartMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("DELETE", "/api/cart");
+      await apiRequest("DELETE", "/api/cart");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       toast({
-        title: "Cart Cleared",
-        description: "All items have been removed from your cart.",
+        title: "Cart cleared",
+        description: "All items have been removed from your cart",
       });
     },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to clear cart.",
+        description: "Failed to clear cart",
         variant: "destructive",
       });
     },
   });
 
-  if (authLoading || loadingCart) {
+  const handleUpdateQuantity = (itemId: number, quantity: number) => {
+    if (quantity < 1) return;
+    updateQuantityMutation.mutate({ itemId, quantity });
+  };
+
+  const handleRemoveItem = (itemId: number) => {
+    removeItemMutation.mutate(itemId);
+  };
+
+  const subtotal = cartItems.reduce((sum: number, item: any) => {
+    const price = item.product?.salePrice || item.product?.price || 0;
+    return sum + parseFloat(price) * item.quantity;
+  }, 0);
+
+  const shipping = subtotal > 50 ? 0 : 9.99;
+  const total = subtotal + shipping;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-32 bg-muted rounded-lg"></div>
-            ))}
-          </div>
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
+        <Footer />
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return null; // Will redirect in useEffect
-  }
-
-  const subtotal = cartItems.reduce((sum, item) => {
-    return sum + parseFloat(item.product.price) * item.quantity;
-  }, 0);
-
-  const shipping = subtotal >= 50 ? 0 : 8.99;
-  const tax = subtotal * 0.08; // 8% tax
-  const total = subtotal + shipping + tax;
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-serif font-bold text-foreground">Shopping Cart</h1>
+          <h1 className="text-3xl font-bold text-foreground">Shopping Cart</h1>
           <p className="text-muted-foreground mt-2">
             {cartItems.length} {cartItems.length === 1 ? "item" : "items"} in your cart
           </p>
@@ -168,12 +114,10 @@ export default function CartPage() {
 
         {cartItems.length === 0 ? (
           <div className="text-center py-16">
-            <ShoppingBag className="w-24 h-24 mx-auto text-muted-foreground mb-4" />
+            <ShoppingBag className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <h2 className="text-2xl font-semibold text-foreground mb-2">Your cart is empty</h2>
-            <p className="text-muted-foreground mb-8">
-              Discover our beautiful candle collection and add some items to your cart.
-            </p>
-            <Button size="lg" onClick={() => window.location.href = "/"}>
+            <p className="text-muted-foreground mb-6">Add some beautiful candles to get started!</p>
+            <Button onClick={() => window.location.href = "/"}>
               Continue Shopping
             </Button>
           </div>
@@ -181,79 +125,75 @@ export default function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
-              {cartItems.map((item) => (
+              {cartItems.map((item: any) => (
                 <Card key={item.id}>
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-4">
-                      {/* Product Image */}
-                      <div className="w-20 h-20 bg-muted rounded-lg overflow-hidden">
-                        {item.product.images && item.product.images.length > 0 ? (
-                          <img
-                            src={item.product.images[0]}
-                            alt={item.product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <ShoppingBag className="w-8 h-8 text-muted-foreground" />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Product Details */}
+                      <img
+                        src={item.product?.imageUrl || "https://images.unsplash.com/photo-1602874801006-47f0a17605f7?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&h=200"}
+                        alt={item.product?.name}
+                        className="w-20 h-20 rounded-lg object-cover"
+                      />
+                      
                       <div className="flex-1">
-                        <h3 className="font-semibold text-foreground">{item.product.name}</h3>
-                        {item.selectedVariant && (
-                          <p className="text-sm text-muted-foreground">
-                            Size: {(item.selectedVariant as any)?.size || "Standard"}
-                          </p>
-                        )}
-                        <p className="text-lg font-bold text-primary mt-1">
-                          ${parseFloat(item.product.price).toFixed(2)}
+                        <h3 className="font-semibold text-foreground text-lg">
+                          {item.product?.name}
+                        </h3>
+                        <p className="text-muted-foreground text-sm">
+                          {item.product?.shortDescription}
                         </p>
+                        <div className="flex items-center mt-3">
+                          <span className="text-lg font-bold text-primary">
+                            ${item.product?.salePrice || item.product?.price}
+                          </span>
+                          {item.product?.salePrice && (
+                            <span className="text-sm text-muted-foreground line-through ml-2">
+                              ${item.product?.price}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Quantity Controls */}
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => updateQuantityMutation.mutate({
-                            id: item.id,
-                            quantity: Math.max(1, item.quantity - 1)
-                          })}
-                          disabled={updateQuantityMutation.isPending}
-                          className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors"
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center border rounded-lg">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                            disabled={item.quantity <= 1 || updateQuantityMutation.isPending}
+                          >
+                            <Minus className="w-4 h-4" />
+                          </Button>
+                          <span className="px-3 py-1 min-w-[2rem] text-center font-semibold">
+                            {item.quantity}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                            disabled={updateQuantityMutation.isPending}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveItem(item.id)}
+                          disabled={removeItemMutation.isPending}
                         >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <span className="w-8 text-center font-medium">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantityMutation.mutate({
-                            id: item.id,
-                            quantity: item.quantity + 1
-                          })}
-                          disabled={updateQuantityMutation.isPending}
-                          className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
                       </div>
-
-                      {/* Remove Button */}
-                      <button
-                        onClick={() => removeItemMutation.mutate(item.id)}
-                        disabled={removeItemMutation.isPending}
-                        className="p-2 text-muted-foreground hover:text-destructive transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
 
               <div className="flex justify-between items-center pt-4">
-                <Button
-                  variant="outline"
+                <Button 
+                  variant="outline" 
                   onClick={() => clearCartMutation.mutate()}
                   disabled={clearCartMutation.isPending}
                 >
@@ -267,50 +207,63 @@ export default function CartPage() {
 
             {/* Order Summary */}
             <div className="lg:col-span-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Order Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
+              <Card className="sticky top-4">
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-semibold text-foreground mb-6">Order Summary</h2>
+                  
+                  <div className="space-y-4">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="font-semibold">${subtotal.toFixed(2)}</span>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Shipping</span>
+                      <span className="font-semibold">
+                        {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
+                      </span>
+                    </div>
+                    
+                    {shipping > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        Add ${(50 - subtotal).toFixed(2)} more for free shipping
+                      </p>
+                    )}
+                    
+                    <div className="border-t pt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-semibold text-foreground">Total</span>
+                        <span className="text-2xl font-bold text-primary">
+                          ${total.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Shipping</span>
-                    <span>{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Tax</span>
-                    <span>${tax.toFixed(2)}</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between text-lg font-semibold">
-                    <span>Total</span>
-                    <span>${total.toFixed(2)}</span>
-                  </div>
-
-                  {subtotal < 50 && (
-                    <p className="text-sm text-muted-foreground">
-                      Add ${(50 - subtotal).toFixed(2)} more for free shipping!
-                    </p>
-                  )}
-
-                  <Button size="lg" className="w-full">
+                  
+                  <Button className="w-full mt-6" size="lg">
                     Proceed to Checkout
                   </Button>
-
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <p>• Secure checkout with SSL encryption</p>
-                    <p>• 30-day return policy</p>
-                    <p>• Free shipping on orders over $50</p>
+                  
+                  <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span>Secure checkout</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span>30-day return policy</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <span>Free shipping over $50</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
           </div>
         )}
-      </div>
+      </main>
 
       <Footer />
     </div>

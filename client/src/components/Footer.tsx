@@ -1,164 +1,166 @@
-import { Flame, Facebook, Instagram, Twitter, Youtube, Mail } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { Link } from "wouter";
+import { Flame, Facebook, Instagram, Twitter, Youtube } from "lucide-react";
 
-export default function Footer() {
-  const [email, setEmail] = useState("");
-
-  const handleNewsletterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-
-    try {
-      const response = await fetch("/api/newsletter/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      
-      if (response.ok) {
-        setEmail("");
-        // Show success message
-      }
-    } catch (error) {
-      console.error("Newsletter subscription failed:", error);
-    }
-  };
-
+export function Footer() {
   return (
-    <footer className="bg-muted/50 border-t border-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <footer className="bg-gray-900 text-white">
+      <div className="container-responsive py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Column */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-2 mb-6">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-orange-500 rounded-lg flex items-center justify-center">
-                <Flame className="w-5 h-5 text-white" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600">
+                <Flame className="h-5 w-5 text-white" />
               </div>
-              <span className="text-2xl font-serif font-bold text-foreground">Lumient</span>
+              <span className="font-serif text-xl font-bold">Lumient</span>
             </div>
-            <p className="text-muted-foreground mb-6 max-w-md leading-relaxed">
-              Crafting premium, handmade candles that transform spaces and uplift spirits. Each candle is made with love, natural ingredients, and sustainable practices.
+            <p className="text-gray-400 mb-6 max-w-md leading-relaxed">
+              Illuminating homes with handcrafted candles that transform ordinary moments into extraordinary experiences. Each flame tells a story of warmth, comfort, and artisanal excellence.
             </p>
             <div className="flex space-x-4">
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                <Facebook className="w-5 h-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                <Instagram className="w-5 h-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                <Twitter className="w-5 h-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                <Youtube className="w-5 h-5" />
-              </Button>
+              <a
+                href="#"
+                className="p-2 bg-gray-800 hover:bg-gray-700 rounded-full transition-colors duration-200"
+              >
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a
+                href="#"
+                className="p-2 bg-gray-800 hover:bg-gray-700 rounded-full transition-colors duration-200"
+              >
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a
+                href="#"
+                className="p-2 bg-gray-800 hover:bg-gray-700 rounded-full transition-colors duration-200"
+              >
+                <Twitter className="h-5 w-5" />
+              </a>
+              <a
+                href="#"
+                className="p-2 bg-gray-800 hover:bg-gray-700 rounded-full transition-colors duration-200"
+              >
+                <Youtube className="h-5 w-5" />
+              </a>
             </div>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-semibold text-foreground mb-6">Quick Links</h3>
-            <ul className="space-y-3">
+            <h3 className="text-white font-semibold mb-4">Quick Links</h3>
+            <ul className="space-y-2">
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                  Shop All
-                </a>
+                <Link
+                  href="/"
+                  className="text-gray-400 hover:text-amber-400 transition-colors duration-200"
+                >
+                  Home
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                  Collections
-                </a>
+                <Link
+                  href="/?category=aromatherapy"
+                  className="text-gray-400 hover:text-amber-400 transition-colors duration-200"
+                >
+                  Aromatherapy
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                  Gift Cards
-                </a>
+                <Link
+                  href="/?category=seasonal"
+                  className="text-gray-400 hover:text-amber-400 transition-colors duration-200"
+                >
+                  Seasonal
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                  About Us
-                </a>
+                <Link
+                  href="/?category=luxury"
+                  className="text-gray-400 hover:text-amber-400 transition-colors duration-200"
+                >
+                  Luxury
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                  Contact
-                </a>
+                <Link
+                  href="/?featured=true"
+                  className="text-gray-400 hover:text-amber-400 transition-colors duration-200"
+                >
+                  Featured
+                </Link>
               </li>
             </ul>
           </div>
 
           {/* Customer Care */}
           <div>
-            <h3 className="font-semibold text-foreground mb-6">Customer Care</h3>
-            <ul className="space-y-3">
+            <h3 className="text-white font-semibold mb-4">Customer Care</h3>
+            <ul className="space-y-2">
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <a
+                  href="#"
+                  className="text-gray-400 hover:text-amber-400 transition-colors duration-200"
+                >
                   Shipping Info
                 </a>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <a
+                  href="#"
+                  className="text-gray-400 hover:text-amber-400 transition-colors duration-200"
+                >
                   Returns
                 </a>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <a
+                  href="#"
+                  className="text-gray-400 hover:text-amber-400 transition-colors duration-200"
+                >
+                  FAQ
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#"
+                  className="text-gray-400 hover:text-amber-400 transition-colors duration-200"
+                >
                   Size Guide
                 </a>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <a
+                  href="#"
+                  className="text-gray-400 hover:text-amber-400 transition-colors duration-200"
+                >
                   Care Instructions
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                  FAQ
                 </a>
               </li>
             </ul>
           </div>
         </div>
 
-        {/* Newsletter Section */}
-        <div className="border-t border-border mt-12 pt-8">
-          <div className="max-w-md mx-auto text-center">
-            <div className="flex items-center justify-center mb-4">
-              <Mail className="w-6 h-6 text-primary mr-2" />
-              <h3 className="text-lg font-semibold text-foreground">Stay Updated</h3>
-            </div>
-            <p className="text-muted-foreground mb-4">
-              Get the latest updates on new products and exclusive offers.
-            </p>
-            <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="flex-1"
-                required
-              />
-              <Button type="submit">Subscribe</Button>
-            </form>
-          </div>
-        </div>
-
-        {/* Bottom Bar */}
-        <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-muted-foreground text-sm">
-            © 2024 Lumient. All rights reserved.
+        <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between">
+          <p className="text-gray-500 text-sm">
+            © 2024 Lumient. All rights reserved. Crafted with ❤️ for candle lovers.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <a href="#" className="text-muted-foreground hover:text-primary text-sm transition-colors">
+            <a
+              href="#"
+              className="text-gray-500 hover:text-amber-400 text-sm transition-colors duration-200"
+            >
               Privacy Policy
             </a>
-            <a href="#" className="text-muted-foreground hover:text-primary text-sm transition-colors">
+            <a
+              href="#"
+              className="text-gray-500 hover:text-amber-400 text-sm transition-colors duration-200"
+            >
               Terms of Service
             </a>
-            <a href="#" className="text-muted-foreground hover:text-primary text-sm transition-colors">
+            <a
+              href="#"
+              className="text-gray-500 hover:text-amber-400 text-sm transition-colors duration-200"
+            >
               Cookie Policy
             </a>
           </div>

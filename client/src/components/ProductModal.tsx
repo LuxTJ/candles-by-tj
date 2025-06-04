@@ -1,102 +1,180 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Star, Heart, Minus, Plus, X, Leaf, Clock, Truck } from "lucide-react";
-import type { Product } from "@shared/schema";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { Heart, Star, ShoppingBag, Minus, Plus, Leaf, Clock, Truck } from "lucide-react";
+import type { ProductWithReviews, ProductVariant } from "@/lib/types";
 
 interface ProductModalProps {
-  product: Product;
+  product: ProductWithReviews | null;
+  isOpen: boolean;
   onClose: () => void;
-  onAddToCart: (selectedSize?: string) => void;
 }
 
-export function ProductModal({ product, onClose, onAddToCart }: ProductModalProps) {
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedSize, setSelectedSize] = useState(product.size);
+export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
+  const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [isLiked, setIsLiked] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant>({});
 
-  const renderStars = (rating: number) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
+  const addToCartMutation = useMutation({
+    mutationFn: async (data: { productId: number; quantity: number; variant?: ProductVariant }) => {
+      const response = await apiRequest("POST", "/api/cart", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Added to cart",
+        description: `${product?.name} has been added to your cart.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+      onClose();
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to add items to your cart.",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 2000);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(
-        <Star key={i} className="w-5 h-5 fill-current text-yellow-400" />
-      );
-    }
+  const toggleWishlistMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/wishlist", { productId: product?.id });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Added to wishlist",
+        description: `${product?.name} has been added to your wishlist.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to manage your wishlist.",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 2000);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to add to wishlist. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
-    if (hasHalfStar) {
-      stars.push(
-        <Star key="half" className="w-5 h-5 fill-current text-yellow-400 opacity-50" />
-      );
-    }
-
-    const remainingStars = 5 - Math.ceil(rating);
-    for (let i = 0; i < remainingStars; i++) {
-      stars.push(
-        <Star key={`empty-${i}`} className="w-5 h-5 text-gray-300 dark:text-gray-600" />
-      );
-    }
-
-    return stars;
-  };
-
-  const hasDiscount = product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price);
-  const discountPercentage = hasDiscount 
-    ? Math.round(((parseFloat(product.originalPrice!) - parseFloat(product.price)) / parseFloat(product.originalPrice!)) * 100)
-    : 0;
+  if (!product) return null;
 
   const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) {
-      onAddToCart(selectedSize);
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to add items to your cart.",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 2000);
+      return;
     }
-    onClose();
+
+    addToCartMutation.mutate({
+      productId: product.id,
+      quantity,
+      variant: Object.keys(selectedVariant).length > 0 ? selectedVariant : undefined,
+    });
   };
 
-  const sizeOptions = ["Small", "Medium", "Large"];
+  const handleAddToWishlist = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to manage your wishlist.",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 2000);
+      return;
+    }
+
+    toggleWishlistMutation.mutate();
+  };
+
+  const primaryImage = product.images?.[selectedImageIndex] || product.images?.[0] || "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=600&h=600&fit=crop";
+  const hasDiscount = product.compareAtPrice && parseFloat(product.compareAtPrice) > parseFloat(product.price);
+  const discountPercent = hasDiscount
+    ? Math.round(((parseFloat(product.compareAtPrice!) - parseFloat(product.price)) / parseFloat(product.compareAtPrice!)) * 100)
+    : 0;
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-serif font-bold text-gray-900 dark:text-white">
-            {product.name}
-          </DialogTitle>
+          <DialogTitle>{product.name}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Product Images */}
           <div className="space-y-4">
-            {/* Main Image */}
-            <div className="aspect-square rounded-xl overflow-hidden">
+            <div className="aspect-square overflow-hidden rounded-lg">
               <img
-                src={product.images[selectedImage] || product.images[0] || "https://via.placeholder.com/600x600?text=No+Image"}
+                src={primaryImage}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
               />
             </div>
             
-            {/* Thumbnail Gallery */}
-            {product.images.length > 1 && (
+            {product.images && product.images.length > 1 && (
               <div className="flex space-x-2 overflow-x-auto">
                 {product.images.map((image, index) => (
                   <button
                     key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
-                      selectedImage === index 
-                        ? "border-primary-400" 
-                        : "border-transparent hover:border-primary-400"
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 ${
+                      selectedImageIndex === index
+                        ? "border-primary"
+                        : "border-transparent hover:border-primary/50"
                     }`}
                   >
                     <img
                       src={image}
-                      alt={`${product.name} angle ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      alt={`${product.name} view ${index + 1}`}
+                      className="h-full w-full object-cover"
                     />
                   </button>
                 ))}
@@ -106,145 +184,165 @@ export function ProductModal({ product, onClose, onAddToCart }: ProductModalProp
 
           {/* Product Details */}
           <div className="space-y-6">
-            {/* Rating and Badges */}
-            <div>
-              <div className="flex items-center mb-2">
-                <div className="flex mr-2">
-                  {renderStars(parseFloat(product.rating || "0"))}
-                </div>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  ({product.reviewCount} reviews)
-                </span>
+            {/* Rating */}
+            <div className="flex items-center gap-2">
+              <div className="flex">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`h-4 w-4 ${
+                      i < Math.floor(product.reviewStats?.averageRating || 0)
+                        ? "fill-current text-yellow-400"
+                        : "text-gray-300"
+                    }`}
+                  />
+                ))}
               </div>
-              
-              {/* Badges */}
-              <div className="flex gap-2 mb-4">
-                {product.featured && (
-                  <Badge className="bg-green-500 text-white">Bestseller</Badge>
-                )}
-                {hasDiscount && (
-                  <Badge className="bg-red-500 text-white">{discountPercentage}% OFF</Badge>
-                )}
-              </div>
+              <span className="text-sm text-muted-foreground">
+                ({product.reviewStats?.totalReviews || 0} reviews)
+              </span>
+            </div>
 
-              {/* Price */}
-              <div className="flex items-center space-x-3 mb-4">
-                <span className="text-3xl font-bold text-primary-600 dark:text-primary-400">
-                  ${product.price}
-                </span>
-                {hasDiscount && (
-                  <>
-                    <span className="text-lg text-gray-500 dark:text-gray-400 line-through">
-                      ${product.originalPrice}
-                    </span>
-                    <Badge className="bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400">
-                      Save ${(parseFloat(product.originalPrice!) - parseFloat(product.price)).toFixed(2)}
-                    </Badge>
-                  </>
-                )}
-              </div>
+            {/* Price */}
+            <div className="flex items-center gap-3">
+              <span className="text-3xl font-bold text-foreground">
+                ${parseFloat(product.price).toFixed(2)}
+              </span>
+              {hasDiscount && (
+                <>
+                  <span className="text-lg text-muted-foreground line-through">
+                    ${parseFloat(product.compareAtPrice!).toFixed(2)}
+                  </span>
+                  <Badge variant="destructive">
+                    {discountPercent}% OFF
+                  </Badge>
+                </>
+              )}
             </div>
 
             {/* Description */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Description
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                {product.description}
-              </p>
-            </div>
+            {product.description && (
+              <div>
+                <h3 className="font-semibold mb-2">Description</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  {product.description}
+                </p>
+              </div>
+            )}
 
             {/* Size Options */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                Size
-              </h3>
-              <Select value={selectedSize} onValueChange={setSelectedSize}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select size" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sizeOptions.map((size) => (
-                    <SelectItem key={size} value={size}>
-                      {size} {size === "Small" && "(20hr)"} 
-                      {size === "Medium" && "(40hr)"} 
-                      {size === "Large" && "(60hr)"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {product.variants?.sizes && product.variants.sizes.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-3">Size</h3>
+                <RadioGroup
+                  value={selectedVariant.size || ""}
+                  onValueChange={(value) =>
+                    setSelectedVariant({ ...selectedVariant, size: value })
+                  }
+                >
+                  <div className="flex gap-2">
+                    {product.variants.sizes.map((size) => (
+                      <div key={size.name} className="flex items-center space-x-2">
+                        <RadioGroupItem value={size.name} id={size.name} />
+                        <Label htmlFor={size.name} className="cursor-pointer">
+                          {size.name} ({size.burnTime})
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+
+            {/* Scent Options */}
+            {product.variants?.scents && product.variants.scents.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-3">Scent</h3>
+                <RadioGroup
+                  value={selectedVariant.scent || ""}
+                  onValueChange={(value) =>
+                    setSelectedVariant({ ...selectedVariant, scent: value })
+                  }
+                >
+                  <div className="grid grid-cols-2 gap-2">
+                    {product.variants.scents.map((scent) => (
+                      <div key={scent} className="flex items-center space-x-2">
+                        <RadioGroupItem value={scent} id={scent} />
+                        <Label htmlFor={scent} className="cursor-pointer">
+                          {scent}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
 
             {/* Quantity */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                Quantity
-              </h3>
+              <h3 className="font-semibold mb-3">Quantity</h3>
               <div className="flex items-center space-x-4">
-                <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
+                <div className="flex items-center border rounded-lg">
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={quantity <= 1}
-                    className="p-2"
                   >
-                    <Minus className="w-4 h-4" />
+                    <Minus className="h-4 w-4" />
                   </Button>
-                  <span className="px-4 py-2 text-gray-900 dark:text-white font-medium">
-                    {quantity}
-                  </span>
+                  <span className="px-4 py-2 font-medium">{quantity}</span>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     onClick={() => setQuantity(quantity + 1)}
-                    className="p-2"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex space-x-4">
+            <div className="flex gap-4">
               <Button
+                className="flex-1 btn-primary"
                 onClick={handleAddToCart}
-                disabled={!product.inStock}
-                className="flex-1 bg-primary-500 hover:bg-primary-600 text-white text-lg py-3"
+                disabled={addToCartMutation.isPending}
               >
-                {product.inStock ? `Add ${quantity} to Cart` : "Out of Stock"}
+                <ShoppingBag className="mr-2 h-4 w-4" />
+                {addToCartMutation.isPending ? "Adding..." : "Add to Cart"}
               </Button>
+              
               <Button
                 variant="outline"
-                size="lg"
-                onClick={() => setIsLiked(!isLiked)}
-                className="px-6 py-3"
+                size="icon"
+                onClick={handleAddToWishlist}
+                disabled={toggleWishlistMutation.isPending}
               >
-                <Heart className={`w-5 h-5 ${isLiked ? "fill-current text-red-500" : ""}`} />
+                <Heart className="h-4 w-4" />
               </Button>
             </div>
 
+            <Separator />
+
             {/* Product Features */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-              <div className="space-y-3">
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <Leaf className="h-5 w-5 text-green-500" />
+                <span className="text-sm">100% Natural Soy Wax</span>
+              </div>
+              
+              {product.burnTime && (
                 <div className="flex items-center space-x-3">
-                  <Leaf className="w-5 h-5 text-green-500" />
-                  <span className="text-gray-600 dark:text-gray-300">100% Natural Soy Wax</span>
+                  <Clock className="h-5 w-5 text-primary" />
+                  <span className="text-sm">{product.burnTime} Burn Time</span>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Clock className="w-5 h-5 text-primary-400" />
-                  <span className="text-gray-600 dark:text-gray-300">
-                    {product.burnTime || "Long-lasting burn time"}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Truck className="w-5 h-5 text-blue-500" />
-                  <span className="text-gray-600 dark:text-gray-300">
-                    Free Shipping on Orders $50+
-                  </span>
-                </div>
+              )}
+              
+              <div className="flex items-center space-x-3">
+                <Truck className="h-5 w-5 text-blue-500" />
+                <span className="text-sm">Free Shipping on Orders $50+</span>
               </div>
             </div>
           </div>

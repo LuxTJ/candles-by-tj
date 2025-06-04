@@ -1,221 +1,71 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Header } from "@/components/Header";
-import { ProductCard } from "@/components/ProductCard";
-import { ProductModal } from "@/components/ProductModal";
-import { CartSidebar } from "@/components/CartSidebar";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { Star, Leaf, Heart, Clock, Truck, Mail, Flame, Filter } from "lucide-react";
+import { useEffect } from "react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Product, CartItemWithProduct } from "@shared/schema";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Flame, Leaf, Heart, Clock, ArrowRight, Star } from "lucide-react";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
+import { ProductCard } from "@/components/products/ProductCard";
+import { useProducts } from "@/hooks/useProducts";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Home() {
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [newsletterEmail, setNewsletterEmail] = useState("");
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  // Fetch all products
-  const { data: allProducts = [], isLoading: productsLoading } = useQuery({
-    queryKey: ["/api/products"],
-  });
-
-  // Fetch cart items
-  const { data: cartItems = [], isLoading: cartLoading } = useQuery({
-    queryKey: ["/api/cart"],
-  });
-
-  // Filter products based on category and search
-  const filteredProducts = allProducts.filter((product: Product) => {
-    const matchesCategory = categoryFilter === "all" || product.category.toLowerCase() === categoryFilter.toLowerCase();
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (product.scent && product.scent.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCategory && matchesSearch;
-  });
-
-  // Add to cart mutation
-  const addToCartMutation = useMutation({
-    mutationFn: async ({ productId, quantity = 1, selectedSize }: { productId: number; quantity?: number; selectedSize?: string }) => {
-      await apiRequest("POST", "/api/cart", {
-        productId,
-        quantity,
-        selectedSize,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      toast({
-        title: "Added to cart!",
-        description: "Item has been added to your cart.",
-      });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to add item to cart. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Update cart item mutation
-  const updateCartMutation = useMutation({
-    mutationFn: async ({ id, quantity }: { id: number; quantity: number }) => {
-      await apiRequest("PUT", `/api/cart/${id}`, { quantity });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to update cart item.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Remove from cart mutation
-  const removeFromCartMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/cart/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      toast({
-        title: "Removed from cart",
-        description: "Item has been removed from your cart.",
-      });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to remove item from cart.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleAddToCart = (productId: number, selectedSize?: string) => {
-    addToCartMutation.mutate({ productId, selectedSize });
-  };
-
-  const handleUpdateQuantity = (id: number, quantity: number) => {
-    updateCartMutation.mutate({ id, quantity });
-  };
-
-  const handleRemoveItem = (id: number) => {
-    removeFromCartMutation.mutate(id);
-  };
-
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newsletterEmail) {
-      toast({
-        title: "Success!",
-        description: "Thank you for subscribing to our newsletter!",
-      });
-      setNewsletterEmail("");
-    }
-  };
-
-  const cartCount = cartItems.reduce((total: number, item: CartItemWithProduct) => total + item.quantity, 0);
-
-  if (productsLoading || cartLoading) {
-    return (
-      <div className="min-h-screen bg-warm-50 dark:bg-gray-900">
-        <Header cartCount={0} onCartClick={() => setIsCartOpen(true)} />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-500"></div>
-        </div>
-      </div>
-    );
-  }
+  const { user } = useAuth();
+  const { data: featuredProducts = [] } = useProducts({ featured: true, limit: 4 });
 
   return (
-    <div className="min-h-screen bg-warm-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-      <Header cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
-
+    <div className="min-h-screen bg-background">
+      <Header />
+      
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-warm-100 via-primary-50 to-warm-200 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 overflow-hidden">
-        <div className="absolute inset-0 bg-black/10 dark:bg-black/20"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800">
+        <div className="absolute inset-0 bg-black/5 dark:bg-black/20" />
+        <div className="relative container mx-auto px-4 py-20 lg:py-32">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="animate-fade-in">
-              <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white leading-tight mb-6">
+            <div className="animate-slide-up">
+              <div className="mb-6">
+                <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20">
+                  Welcome back, {user?.firstName || "Candle Lover"}!
+                </Badge>
+              </div>
+              
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-serif text-foreground leading-tight mb-6">
                 Illuminate Your
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-warm-500"> Sacred Spaces</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-500 block">
+                  Sacred Spaces
+                </span>
               </h1>
-              <p className="text-lg sm:text-xl text-gray-700 dark:text-gray-300 mb-8 leading-relaxed">
-                Discover our collection of hand-poured, artisanal candles crafted with premium soy wax and natural fragrances. Each candle tells a story of warmth, comfort, and mindful living.
+              
+              <p className="text-lg sm:text-xl text-muted-foreground mb-8 leading-relaxed">
+                Discover our collection of hand-poured, artisanal candles crafted with 
+                premium soy wax and natural fragrances. Each candle tells a story of 
+                warmth, comfort, and mindful living.
               </p>
+              
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                  size="lg"
-                  className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-primary-600 hover:to-primary-700 transform hover:scale-105 transition-all duration-200 shadow-lg"
-                >
-                  Shop Now
+                <Button size="lg" className="candle-glow" asChild>
+                  <Link href="/products">
+                    Shop Collection
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
                 </Button>
-                <Button 
-                  variant="outline"
-                  size="lg"
-                  className="border-2 border-primary-500 text-primary-600 dark:text-primary-400 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary-500 hover:text-white transition-all duration-200"
-                >
-                  View Collections
+                <Button variant="outline" size="lg" asChild>
+                  <Link href="/collections">View Collections</Link>
                 </Button>
               </div>
             </div>
-            <div className="relative">
-              <img 
-                src="https://pixabay.com/get/g21fe48abd4c1e5eb8a98dbf58d04b9f52a9e94f62a15ceaafd7dd0ad6269902f8a28241defe8f26d956edd9b7e9e0107b435ddbb1ce1b0dac4d2bb036a137211_1280.jpg" 
-                alt="Beautiful handcrafted candles arranged in a cozy setting" 
-                className="w-full h-96 lg:h-[500px] object-cover rounded-2xl shadow-2xl" 
+            
+            <div className="relative animate-fade-in">
+              <img
+                src="https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=600&h=600&fit=crop"
+                alt="Beautiful handcrafted candles in a cozy setting"
+                className="w-full h-96 lg:h-[500px] object-cover rounded-2xl shadow-2xl"
               />
-              <div className="absolute -bottom-6 -left-6 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl">
+              <div className="absolute -bottom-6 -left-6 bg-card p-6 rounded-xl shadow-xl border">
                 <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Hand-poured with love</span>
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-sm font-medium">Hand-poured with love</span>
                 </div>
               </div>
             </div>
@@ -223,230 +73,141 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Search and Filter Section */}
-      <section className="py-8 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="flex items-center space-x-4 flex-1">
-              <Input
-                type="search"
-                placeholder="Search candles..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="max-w-md"
-              />
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-48">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="aromatherapy">Aromatherapy</SelectItem>
-                  <SelectItem value="seasonal">Seasonal</SelectItem>
-                  <SelectItem value="luxury">Luxury</SelectItem>
-                  <SelectItem value="sweet">Sweet</SelectItem>
-                  <SelectItem value="woody">Woody</SelectItem>
-                  <SelectItem value="fresh">Fresh</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing {filteredProducts.length} of {allProducts.length} products
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Products Section */}
-      <section className="py-16 lg:py-24 bg-warm-50 dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Featured Categories */}
+      <section className="py-16 lg:py-24">
+        <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="font-serif text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Our Candle Collection
+            <h2 className="text-3xl lg:text-4xl font-bold font-serif text-foreground mb-4">
+              Explore Our Collections
             </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Discover handcrafted candles that bring warmth and ambiance to any space
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              From soy wax to beeswax, discover candles crafted for every mood and moment
             </p>
           </div>
 
-          {filteredProducts.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-gray-600 dark:text-gray-400 text-lg">
-                No candles found matching your criteria.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {filteredProducts.map((product: Product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToCart={() => handleAddToCart(product.id)}
-                  onQuickView={() => setSelectedProduct(product)}
-                />
-              ))}
-            </div>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                title: "Aromatherapy",
+                description: "Essential oil blends for relaxation",
+                image: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=400&h=300&fit=crop",
+                color: "from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30",
+                icon: Leaf,
+                iconColor: "text-purple-600 dark:text-purple-400"
+              },
+              {
+                title: "Seasonal",
+                description: "Limited edition scents for every season",
+                image: "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400&h=300&fit=crop",
+                color: "from-orange-100 to-red-100 dark:from-orange-900/30 dark:to-red-900/30",
+                icon: Flame,
+                iconColor: "text-orange-600 dark:text-orange-400"
+              },
+              {
+                title: "Luxury",
+                description: "Premium wax blends with exotic fragrances",
+                image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop",
+                color: "from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30",
+                icon: Star,
+                iconColor: "text-amber-600 dark:text-amber-400"
+              }
+            ].map((category) => (
+              <Card key={category.title} className="group cursor-pointer overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
+                <div className={`relative p-8 h-80 flex flex-col justify-between bg-gradient-to-br ${category.color}`}>
+                  <img
+                    src={category.image}
+                    alt={category.title}
+                    className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity"
+                  />
+                  <div className="relative z-10">
+                    <category.icon className={`w-8 h-8 ${category.iconColor} mb-4`} />
+                  </div>
+                  <div className="relative z-10">
+                    <h3 className="text-2xl font-bold font-serif text-foreground mb-2">
+                      {category.title}
+                    </h3>
+                    <p className="text-muted-foreground mb-4">{category.description}</p>
+                    <Button variant="ghost" className="p-0 text-primary hover:text-primary/80">
+                      Shop Collection
+                      <ArrowRight className="ml-2 w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Values Section */}
-      <section className="py-16 lg:py-24 bg-white dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Featured Products */}
+      <section className="py-16 lg:py-24 bg-muted/30">
+        <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="font-serif text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-3xl lg:text-4xl font-bold font-serif text-foreground mb-4">
+              Bestselling Candles
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Discover customer favorites that bring warmth and ambiance to any space
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+
+          <div className="text-center mt-12">
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/products">View All Products</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose Us */}
+      <section className="py-16 lg:py-24">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold font-serif text-foreground mb-4">
               Why Choose Lumient
             </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Every candle is crafted with passion, sustainability, and attention to detail that transforms your space into a sanctuary.
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Every candle is crafted with passion, sustainability, and attention to detail
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center group">
-              <div className="w-16 h-16 mx-auto mb-6 p-4 bg-primary-100 dark:bg-primary-900/20 rounded-full group-hover:bg-primary-200 dark:group-hover:bg-primary-800/30 transition-colors duration-300">
-                <Leaf className="w-8 h-8 text-primary-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Eco-Friendly</h3>
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                Made with 100% natural soy wax and cotton wicks, our candles are biodegradable and burn cleanly without harmful toxins.
-              </p>
-            </div>
-
-            <div className="text-center group">
-              <div className="w-16 h-16 mx-auto mb-6 p-4 bg-primary-100 dark:bg-primary-900/20 rounded-full group-hover:bg-primary-200 dark:group-hover:bg-primary-800/30 transition-colors duration-300">
-                <Heart className="w-8 h-8 text-primary-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Handcrafted</h3>
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                Each candle is lovingly hand-poured in small batches, ensuring consistent quality and unique character in every piece.
-              </p>
-            </div>
-
-            <div className="text-center group">
-              <div className="w-16 h-16 mx-auto mb-6 p-4 bg-primary-100 dark:bg-primary-900/20 rounded-full group-hover:bg-primary-200 dark:group-hover:bg-primary-800/30 transition-colors duration-300">
-                <Clock className="w-8 h-8 text-primary-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Long-Lasting</h3>
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                Our premium wax blend provides up to 60 hours of burn time, giving you exceptional value and extended enjoyment.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Newsletter Section */}
-      <section className="py-16 lg:py-24 bg-gradient-to-br from-primary-500 to-warm-600 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="mb-8">
-            <Mail className="w-12 h-12 mx-auto text-white/80 mb-6" />
-            <h2 className="font-serif text-3xl lg:text-4xl font-bold text-white mb-4">
-              Stay in the Glow
-            </h2>
-            <p className="text-lg text-white/90 max-w-2xl mx-auto">
-              Subscribe to our newsletter for exclusive offers, new product launches, and candle care tips. Get 15% off your first order!
-            </p>
-          </div>
-          
-          <form onSubmit={handleNewsletterSubmit} className="max-w-md mx-auto">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Input 
-                type="email"
-                value={newsletterEmail}
-                onChange={(e) => setNewsletterEmail(e.target.value)}
-                placeholder="Enter your email address" 
-                className="flex-1 px-6 py-4 rounded-xl border-0 text-gray-900 placeholder-gray-500 focus:ring-4 focus:ring-white/20"
-                required
-              />
-              <Button 
-                type="submit"
-                className="bg-white text-primary-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-colors whitespace-nowrap"
-              >
-                Subscribe
-              </Button>
-            </div>
-            <p className="text-sm text-white/80 mt-4">
-              By subscribing, you agree to our privacy policy and terms of service.
-            </p>
-          </form>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Brand */}
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center space-x-2 mb-6">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary-400 to-primary-600 rounded-lg flex items-center justify-center">
-                  <Flame className="w-5 h-5 text-white" />
+            {[
+              {
+                icon: Leaf,
+                title: "Eco-Friendly",
+                description: "Made with 100% natural soy wax and cotton wicks, our candles are biodegradable and burn cleanly without harmful toxins."
+              },
+              {
+                icon: Heart,
+                title: "Handcrafted",
+                description: "Each candle is lovingly hand-poured in small batches, ensuring consistent quality and unique character in every piece."
+              },
+              {
+                icon: Clock,
+                title: "Long-Lasting",
+                description: "Our premium wax blend provides up to 60 hours of burn time, giving you exceptional value and extended enjoyment."
+              }
+            ].map((feature) => (
+              <div key={feature.title} className="text-center group">
+                <div className="w-16 h-16 mx-auto mb-6 p-4 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors duration-300">
+                  <feature.icon className="w-8 h-8 text-primary mx-auto" />
                 </div>
-                <span className="font-serif font-bold text-xl">Lumient</span>
+                <h3 className="text-xl font-semibold text-foreground mb-3">{feature.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
               </div>
-              <p className="text-gray-400 mb-6 max-w-md leading-relaxed">
-                Illuminating homes with handcrafted candles that transform ordinary moments into extraordinary experiences. Each flame tells a story of warmth, comfort, and artisanal excellence.
-              </p>
-            </div>
-
-            {/* Quick Links */}
-            <div>
-              <h3 className="font-semibold text-lg mb-6">Quick Links</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Home</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Products</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Collections</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">About Us</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Contact</a></li>
-              </ul>
-            </div>
-
-            {/* Customer Care */}
-            <div>
-              <h3 className="font-semibold text-lg mb-6">Customer Care</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Shipping Info</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Returns</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">FAQ</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Size Guide</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Care Instructions</a></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between">
-            <p className="text-gray-500 text-sm">
-              © 2024 Lumient. All rights reserved. Crafted with ❤️ for candle lovers.
-            </p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              <a href="#" className="text-gray-500 hover:text-primary-400 text-sm transition-colors">Privacy Policy</a>
-              <a href="#" className="text-gray-500 hover:text-primary-400 text-sm transition-colors">Terms of Service</a>
-              <a href="#" className="text-gray-500 hover:text-primary-400 text-sm transition-colors">Cookie Policy</a>
-            </div>
+            ))}
           </div>
         </div>
-      </footer>
+      </section>
 
-      {/* Product Modal */}
-      {selectedProduct && (
-        <ProductModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          onAddToCart={(selectedSize) => handleAddToCart(selectedProduct.id, selectedSize)}
-        />
-      )}
-
-      {/* Cart Sidebar */}
-      <CartSidebar
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        items={cartItems}
-        onUpdateQuantity={handleUpdateQuantity}
-        onRemoveItem={handleRemoveItem}
-      />
+      <Footer />
     </div>
   );
 }
