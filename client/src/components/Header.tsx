@@ -1,285 +1,209 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useTheme } from "@/components/ThemeProvider";
-import { useAuth } from "@/hooks/useAuth";
-import { CartSidebar } from "@/components/CartSidebar";
-import { useQuery } from "@tanstack/react-query";
-import {
-  Search,
-  ShoppingBag,
-  User,
-  Sun,
-  Moon,
-  Menu,
-  Flame,
-  Heart,
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetTrigger 
+} from "@/components/ui/sheet";
+import { 
+  Search, 
+  ShoppingBag, 
+  Menu, 
+  Sun, 
+  Moon, 
+  Flame, 
+  User 
 } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
+import { useCart } from "@/hooks/useCart";
 
-export function Header() {
-  const [location] = useLocation();
-  const { theme, setTheme } = useTheme();
-  const { user, isAuthenticated } = useAuth();
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+export default function Header() {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { theme, toggleTheme } = useTheme();
+  const { cartItems, toggleCart } = useCart();
 
-  // Get cart count
-  const { data: cartItems = [] } = useQuery({
-    queryKey: ["/api/cart"],
-    enabled: isAuthenticated,
-  });
-
-  const cartItemCount = cartItems.reduce((total: number, item: any) => total + item.quantity, 0);
-
-  const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
-  };
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.href = `/?search=${encodeURIComponent(searchQuery.trim())}`;
+      // Navigate to search results
+      console.log("Searching for:", searchQuery);
+      setIsSearchOpen(false);
+      setSearchQuery("");
     }
   };
 
   return (
-    <>
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container-responsive flex h-16 items-center justify-between">
+    <header className="sticky top-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-warm-200 dark:border-slate-700">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 animate-glow">
-              <Flame className="h-5 w-5 text-white" />
+          <Link href="/" className="flex items-center space-x-2 group">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary to-warm-500 rounded-lg flex items-center justify-center animate-glow group-hover:animate-pulse">
+              <Flame className="w-5 h-5 text-white" />
             </div>
-            <span className="font-serif text-xl font-bold text-foreground">
+            <span className="text-2xl font-bold text-gray-900 dark:text-white">
               Lumient
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link
-              href="/"
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                location === "/" ? "text-primary" : "text-muted-foreground"
-              }`}
+          <div className="hidden md:flex items-center space-x-8">
+            <Link 
+              href="/" 
+              className="text-gray-700 dark:text-gray-300 hover:text-primary transition-colors duration-200 font-medium"
             >
               Home
             </Link>
-            <Link
-              href="/?category=aromatherapy"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            <Link 
+              href="/products" 
+              className="text-gray-700 dark:text-gray-300 hover:text-primary transition-colors duration-200 font-medium"
             >
-              Aromatherapy
+              Products
             </Link>
-            <Link
-              href="/?category=seasonal"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            <Link 
+              href="/collections" 
+              className="text-gray-700 dark:text-gray-300 hover:text-primary transition-colors duration-200 font-medium"
             >
-              Seasonal
+              Collections
             </Link>
-            <Link
-              href="/?category=luxury"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            <Link 
+              href="/about" 
+              className="text-gray-700 dark:text-gray-300 hover:text-primary transition-colors duration-200 font-medium"
             >
-              Luxury
+              About
             </Link>
-            <Link
-              href="/?featured=true"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            <Link 
+              href="/contact" 
+              className="text-gray-700 dark:text-gray-300 hover:text-primary transition-colors duration-200 font-medium"
             >
-              Featured
+              Contact
             </Link>
-          </nav>
+          </div>
 
-          {/* Search Bar - Desktop */}
-          <form onSubmit={handleSearch} className="hidden md:flex items-center space-x-2">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search candles..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64 pl-8"
-              />
-            </div>
-          </form>
-
-          {/* Right Actions */}
-          <div className="flex items-center space-x-2">
-            {/* Search - Mobile */}
-            <Sheet>
+          {/* Right Side Actions */}
+          <div className="flex items-center space-x-4">
+            {/* Search */}
+            <Sheet open={isSearchOpen} onOpenChange={setIsSearchOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
-                  <Search className="h-5 w-5" />
-                  <span className="sr-only">Search</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors duration-200"
+                >
+                  <Search className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="top" className="h-32">
-                <form onSubmit={handleSearch} className="mt-4">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <SheetContent side="top" className="h-auto">
+                <div className="max-w-2xl mx-auto py-8">
+                  <form onSubmit={handleSearch} className="flex space-x-4">
                     <Input
-                      placeholder="Search candles..."
+                      placeholder="Search candles, scents, collections..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-8"
+                      className="flex-1 text-lg h-12"
                       autoFocus
                     />
-                  </div>
-                </form>
+                    <Button type="submit" size="lg">
+                      Search
+                    </Button>
+                  </form>
+                </div>
               </SheetContent>
             </Sheet>
 
             {/* Theme Toggle */}
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
-              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              <span className="sr-only">Toggle theme</span>
-            </Button>
-
-            {/* Wishlist */}
-            {isAuthenticated && (
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/wishlist">
-                  <Heart className="h-5 w-5" />
-                  <span className="sr-only">Wishlist</span>
-                </Link>
-              </Button>
-            )}
-
-            {/* User Account */}
-            <Button variant="ghost" size="icon" asChild>
-              {isAuthenticated ? (
-                <Link href="/account">
-                  {user?.profileImageUrl ? (
-                    <img
-                      src={user.profileImageUrl}
-                      alt={`${user.firstName || "User"}'s profile`}
-                      className="h-5 w-5 rounded-full object-cover"
-                    />
-                  ) : (
-                    <User className="h-5 w-5" />
-                  )}
-                  <span className="sr-only">Account</span>
-                </Link>
-              ) : (
-                <a href="/api/login">
-                  <User className="h-5 w-5" />
-                  <span className="sr-only">Sign in</span>
-                </a>
-              )}
-            </Button>
-
-            {/* Shopping Cart */}
             <Button
               variant="ghost"
               size="icon"
-              className="relative"
-              onClick={() => setIsCartOpen(true)}
+              onClick={toggleTheme}
+              className="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors duration-200"
             >
-              <ShoppingBag className="h-5 w-5" />
-              {cartItemCount > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="absolute -right-2 -top-2 h-5 w-5 rounded-full p-0 text-xs bg-primary text-primary-foreground"
-                >
-                  {cartItemCount > 99 ? "99+" : cartItemCount}
+              {theme === "light" ? (
+                <Moon className="w-5 h-5" />
+              ) : (
+                <Sun className="w-5 h-5" />
+              )}
+            </Button>
+
+            {/* User Account */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors duration-200"
+            >
+              <User className="w-5 h-5" />
+            </Button>
+
+            {/* Cart */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleCart}
+              className="relative text-gray-600 dark:text-gray-300 hover:text-primary transition-colors duration-200"
+            >
+              <ShoppingBag className="w-5 h-5" />
+              {totalItems > 0 && (
+                <Badge className="absolute -top-2 -right-2 bg-primary text-white h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                  {totalItems}
                 </Badge>
               )}
-              <span className="sr-only">Shopping cart</span>
             </Button>
 
             {/* Mobile Menu */}
-            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Menu</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden text-gray-600 dark:text-gray-300"
+                >
+                  <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80">
-                <nav className="flex flex-col space-y-4">
-                  <Link
-                    href="/"
-                    className="text-lg font-medium"
-                    onClick={() => setIsMobileMenuOpen(false)}
+              <SheetContent side="right">
+                <div className="flex flex-col space-y-6 mt-6">
+                  <Link 
+                    href="/" 
+                    className="text-lg font-medium text-gray-900 dark:text-white hover:text-primary transition-colors"
                   >
                     Home
                   </Link>
-                  <Link
-                    href="/?category=aromatherapy"
-                    className="text-lg font-medium text-muted-foreground hover:text-primary"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                  <Link 
+                    href="/products" 
+                    className="text-lg font-medium text-gray-900 dark:text-white hover:text-primary transition-colors"
                   >
-                    Aromatherapy
+                    Products
                   </Link>
-                  <Link
-                    href="/?category=seasonal"
-                    className="text-lg font-medium text-muted-foreground hover:text-primary"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                  <Link 
+                    href="/collections" 
+                    className="text-lg font-medium text-gray-900 dark:text-white hover:text-primary transition-colors"
                   >
-                    Seasonal
+                    Collections
                   </Link>
-                  <Link
-                    href="/?category=luxury"
-                    className="text-lg font-medium text-muted-foreground hover:text-primary"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                  <Link 
+                    href="/about" 
+                    className="text-lg font-medium text-gray-900 dark:text-white hover:text-primary transition-colors"
                   >
-                    Luxury
+                    About
                   </Link>
-                  <Link
-                    href="/?featured=true"
-                    className="text-lg font-medium text-muted-foreground hover:text-primary"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                  <Link 
+                    href="/contact" 
+                    className="text-lg font-medium text-gray-900 dark:text-white hover:text-primary transition-colors"
                   >
-                    Featured
+                    Contact
                   </Link>
-                  {isAuthenticated && (
-                    <>
-                      <Link
-                        href="/wishlist"
-                        className="text-lg font-medium text-muted-foreground hover:text-primary"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        Wishlist
-                      </Link>
-                      <Link
-                        href="/account"
-                        className="text-lg font-medium text-muted-foreground hover:text-primary"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        Account
-                      </Link>
-                      <a
-                        href="/api/logout"
-                        className="text-lg font-medium text-muted-foreground hover:text-primary"
-                      >
-                        Sign Out
-                      </a>
-                    </>
-                  )}
-                  {!isAuthenticated && (
-                    <a
-                      href="/api/login"
-                      className="text-lg font-medium text-muted-foreground hover:text-primary"
-                    >
-                      Sign In
-                    </a>
-                  )}
-                </nav>
+                </div>
               </SheetContent>
             </Sheet>
           </div>
         </div>
-      </header>
-
-      {/* Cart Sidebar */}
-      <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
-    </>
+      </nav>
+    </header>
   );
 }

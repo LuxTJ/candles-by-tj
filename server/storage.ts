@@ -1,216 +1,144 @@
 import {
-  users,
-  categories,
   products,
   productVariants,
   cartItems,
-  orders,
-  orderItems,
   reviews,
-  type User,
-  type UpsertUser,
-  type Category,
-  type InsertCategory,
+  newsletterSubscribers,
+  orders,
   type Product,
   type InsertProduct,
   type ProductVariant,
   type InsertProductVariant,
   type CartItem,
   type InsertCartItem,
-  type Order,
-  type InsertOrder,
-  type OrderItem,
-  type InsertOrderItem,
   type Review,
   type InsertReview,
-  type ProductWithDetails,
-  type CartItemWithProduct,
-  type OrderWithItems,
+  type NewsletterSubscriber,
+  type InsertNewsletterSubscriber,
+  type Order,
+  type InsertOrder,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, ilike, inArray } from "drizzle-orm";
+import { eq, desc, asc, like, and, or, inArray, sql } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations - mandatory for Replit Auth
-  getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
-
-  // Category operations
-  getCategories(): Promise<Category[]>;
-  createCategory(category: InsertCategory): Promise<Category>;
-
-  // Product operations
+  // Products
   getProducts(filters?: {
-    categoryId?: number;
+    category?: string;
     featured?: boolean;
+    inStock?: boolean;
     search?: string;
+    tags?: string[];
     limit?: number;
     offset?: number;
-  }): Promise<ProductWithDetails[]>;
-  getProduct(id: number): Promise<ProductWithDetails | undefined>;
-  getProductBySlug(slug: string): Promise<ProductWithDetails | undefined>;
+  }): Promise<Product[]>;
+  getProduct(id: number): Promise<Product | undefined>;
+  getProductWithVariants(id: number): Promise<(Product & { variants: ProductVariant[] }) | undefined>;
   createProduct(product: InsertProduct): Promise<Product>;
-  updateProduct(id: number, updates: Partial<InsertProduct>): Promise<Product | undefined>;
+  updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product>;
+  deleteProduct(id: number): Promise<void>;
 
-  // Product variant operations
+  // Product Variants
   getProductVariants(productId: number): Promise<ProductVariant[]>;
   createProductVariant(variant: InsertProductVariant): Promise<ProductVariant>;
+  updateProductVariant(id: number, variant: Partial<InsertProductVariant>): Promise<ProductVariant>;
+  deleteProductVariant(id: number): Promise<void>;
 
-  // Cart operations
-  getCartItems(userId: string): Promise<CartItemWithProduct[]>;
+  // Cart
+  getCartItems(sessionId: string): Promise<(CartItem & { product: Product })[]>;
   addToCart(item: InsertCartItem): Promise<CartItem>;
-  updateCartItem(id: number, quantity: number): Promise<CartItem | undefined>;
+  updateCartItem(id: number, quantity: number): Promise<CartItem>;
   removeFromCart(id: number): Promise<void>;
-  clearCart(userId: string): Promise<void>;
+  clearCart(sessionId: string): Promise<void>;
 
-  // Order operations
-  getOrders(userId: string): Promise<OrderWithItems[]>;
-  getOrder(id: number): Promise<OrderWithItems | undefined>;
-  createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<OrderWithItems>;
-  updateOrderStatus(id: number, status: string): Promise<Order | undefined>;
-
-  // Review operations
-  getProductReviews(productId: number): Promise<(Review & { user: User })[]>;
+  // Reviews
+  getProductReviews(productId: number, limit?: number): Promise<Review[]>;
   createReview(review: InsertReview): Promise<Review>;
   updateProductRating(productId: number): Promise<void>;
+
+  // Newsletter
+  subscribeToNewsletter(subscriber: InsertNewsletterSubscriber): Promise<NewsletterSubscriber>;
+  unsubscribeFromNewsletter(email: string): Promise<void>;
+
+  // Orders
+  createOrder(order: InsertOrder): Promise<Order>;
+  getOrder(id: number): Promise<Order | undefined>;
+  getOrderByNumber(orderNumber: string): Promise<Order | undefined>;
+  updateOrderStatus(id: number, status: string): Promise<Order>;
+
+  // Search
+  searchProducts(query: string): Promise<Product[]>;
 }
 
 export class DatabaseStorage implements IStorage {
-  // User operations - mandatory for Replit Auth
-  async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
-  }
-
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
-  }
-
-  // Category operations
-  async getCategories(): Promise<Category[]> {
-    return await db.select().from(categories).orderBy(categories.name);
-  }
-
-  async createCategory(category: InsertCategory): Promise<Category> {
-    const [newCategory] = await db.insert(categories).values(category).returning();
-    return newCategory;
-  }
-
-  // Product operations
-  async getProducts(filters?: {
-    categoryId?: number;
+  // Products
+  async getProducts(filters: {
+    category?: string;
     featured?: boolean;
+    inStock?: boolean;
     search?: string;
+    tags?: string[];
     limit?: number;
     offset?: number;
-  }): Promise<ProductWithDetails[]> {
-    const query = db
-      .select({
-        product: products,
-        category: categories,
-      })
-      .from(products)
-      .leftJoin(categories, eq(products.categoryId, categories.id))
-      .where(
-        and(
-          eq(products.isActive, true),
-          filters?.categoryId ? eq(products.categoryId, filters.categoryId) : undefined,
-          filters?.featured ? eq(products.isFeatured, true) : undefined,
-          filters?.search ? ilike(products.name, `%${filters.search}%`) : undefined
+  } = {}): Promise<Product[]> {
+    let query = db.select().from(products);
+    
+    const conditions = [];
+    
+    if (filters.category) {
+      conditions.push(eq(products.category, filters.category));
+    }
+    
+    if (filters.featured !== undefined) {
+      conditions.push(eq(products.featured, filters.featured));
+    }
+    
+    if (filters.inStock !== undefined) {
+      conditions.push(eq(products.inStock, filters.inStock));
+    }
+    
+    if (filters.search) {
+      conditions.push(
+        or(
+          like(products.name, `%${filters.search}%`),
+          like(products.description, `%${filters.search}%`),
+          like(products.scent, `%${filters.search}%`)
         )
-      )
-      .orderBy(desc(products.createdAt));
-
-    if (filters?.limit) {
-      query.limit(filters.limit);
+      );
     }
-    if (filters?.offset) {
-      query.offset(filters.offset);
+    
+    if (filters.tags && filters.tags.length > 0) {
+      conditions.push(sql`${products.tags} && ${filters.tags}`);
     }
-
-    const results = await query;
-
-    // Get variants for each product
-    const productIds = results.map(r => r.product.id);
-    const variants = productIds.length > 0 
-      ? await db.select().from(productVariants).where(inArray(productVariants.productId, productIds))
-      : [];
-
-    return results.map(result => ({
-      ...result.product,
-      category: result.category || undefined,
-      variants: variants.filter(v => v.productId === result.product.id),
-    }));
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    query = query.orderBy(desc(products.featured), desc(products.createdAt));
+    
+    if (filters.limit) {
+      query = query.limit(filters.limit);
+    }
+    
+    if (filters.offset) {
+      query = query.offset(filters.offset);
+    }
+    
+    return await query;
   }
 
-  async getProduct(id: number): Promise<ProductWithDetails | undefined> {
-    const [result] = await db
-      .select({
-        product: products,
-        category: categories,
-      })
-      .from(products)
-      .leftJoin(categories, eq(products.categoryId, categories.id))
-      .where(and(eq(products.id, id), eq(products.isActive, true)));
-
-    if (!result) return undefined;
-
-    const variants = await db
-      .select()
-      .from(productVariants)
-      .where(eq(productVariants.productId, id));
-
-    const productReviews = await db
-      .select({
-        review: reviews,
-        user: users,
-      })
-      .from(reviews)
-      .leftJoin(users, eq(reviews.userId, users.id))
-      .where(and(eq(reviews.productId, id), eq(reviews.isActive, true)))
-      .orderBy(desc(reviews.createdAt));
-
-    return {
-      ...result.product,
-      category: result.category || undefined,
-      variants,
-      reviews: productReviews.map(r => r.review),
-    };
+  async getProduct(id: number): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product;
   }
 
-  async getProductBySlug(slug: string): Promise<ProductWithDetails | undefined> {
-    const [result] = await db
-      .select({
-        product: products,
-        category: categories,
-      })
-      .from(products)
-      .leftJoin(categories, eq(products.categoryId, categories.id))
-      .where(and(eq(products.slug, slug), eq(products.isActive, true)));
-
-    if (!result) return undefined;
-
-    const variants = await db
-      .select()
-      .from(productVariants)
-      .where(eq(productVariants.productId, result.product.id));
-
-    return {
-      ...result.product,
-      category: result.category || undefined,
-      variants,
-    };
+  async getProductWithVariants(id: number): Promise<(Product & { variants: ProductVariant[] }) | undefined> {
+    const product = await this.getProduct(id);
+    if (!product) return undefined;
+    
+    const variants = await this.getProductVariants(id);
+    return { ...product, variants };
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
@@ -218,21 +146,22 @@ export class DatabaseStorage implements IStorage {
     return newProduct;
   }
 
-  async updateProduct(id: number, updates: Partial<InsertProduct>): Promise<Product | undefined> {
-    const [updatedProduct] = await db
+  async updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product> {
+    const [updated] = await db
       .update(products)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...product, updatedAt: new Date() })
       .where(eq(products.id, id))
       .returning();
-    return updatedProduct;
+    return updated;
   }
 
-  // Product variant operations
+  async deleteProduct(id: number): Promise<void> {
+    await db.delete(products).where(eq(products.id, id));
+  }
+
+  // Product Variants
   async getProductVariants(productId: number): Promise<ProductVariant[]> {
-    return await db
-      .select()
-      .from(productVariants)
-      .where(eq(productVariants.productId, productId));
+    return await db.select().from(productVariants).where(eq(productVariants.productId, productId));
   }
 
   async createProductVariant(variant: InsertProductVariant): Promise<ProductVariant> {
@@ -240,22 +169,36 @@ export class DatabaseStorage implements IStorage {
     return newVariant;
   }
 
-  // Cart operations
-  async getCartItems(userId: string): Promise<CartItemWithProduct[]> {
-    const results = await db
+  async updateProductVariant(id: number, variant: Partial<InsertProductVariant>): Promise<ProductVariant> {
+    const [updated] = await db
+      .update(productVariants)
+      .set(variant)
+      .where(eq(productVariants.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteProductVariant(id: number): Promise<void> {
+    await db.delete(productVariants).where(eq(productVariants.id, id));
+  }
+
+  // Cart
+  async getCartItems(sessionId: string): Promise<(CartItem & { product: Product })[]> {
+    return await db
       .select({
-        cartItem: cartItems,
+        id: cartItems.id,
+        sessionId: cartItems.sessionId,
+        productId: cartItems.productId,
+        quantity: cartItems.quantity,
+        selectedVariants: cartItems.selectedVariants,
+        createdAt: cartItems.createdAt,
+        updatedAt: cartItems.updatedAt,
         product: products,
       })
       .from(cartItems)
-      .leftJoin(products, eq(cartItems.productId, products.id))
-      .where(eq(cartItems.userId, userId))
+      .innerJoin(products, eq(cartItems.productId, products.id))
+      .where(eq(cartItems.sessionId, sessionId))
       .orderBy(desc(cartItems.createdAt));
-
-    return results.map(result => ({
-      ...result.cartItem,
-      product: result.product!,
-    }));
   }
 
   async addToCart(item: InsertCartItem): Promise<CartItem> {
@@ -265,14 +208,14 @@ export class DatabaseStorage implements IStorage {
       .from(cartItems)
       .where(
         and(
-          eq(cartItems.userId, item.userId),
+          eq(cartItems.sessionId, item.sessionId),
           eq(cartItems.productId, item.productId)
         )
       );
 
     if (existingItem) {
-      // Update quantity if item exists
-      const [updatedItem] = await db
+      // Update quantity
+      const [updated] = await db
         .update(cartItems)
         .set({
           quantity: existingItem.quantity + item.quantity,
@@ -280,7 +223,7 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(cartItems.id, existingItem.id))
         .returning();
-      return updatedItem;
+      return updated;
     } else {
       // Create new cart item
       const [newItem] = await db.insert(cartItems).values(item).returning();
@@ -288,160 +231,126 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateCartItem(id: number, quantity: number): Promise<CartItem | undefined> {
-    const [updatedItem] = await db
+  async updateCartItem(id: number, quantity: number): Promise<CartItem> {
+    const [updated] = await db
       .update(cartItems)
       .set({ quantity, updatedAt: new Date() })
       .where(eq(cartItems.id, id))
       .returning();
-    return updatedItem;
+    return updated;
   }
 
   async removeFromCart(id: number): Promise<void> {
     await db.delete(cartItems).where(eq(cartItems.id, id));
   }
 
-  async clearCart(userId: string): Promise<void> {
-    await db.delete(cartItems).where(eq(cartItems.userId, userId));
+  async clearCart(sessionId: string): Promise<void> {
+    await db.delete(cartItems).where(eq(cartItems.sessionId, sessionId));
   }
 
-  // Order operations
-  async getOrders(userId: string): Promise<OrderWithItems[]> {
-    const userOrders = await db
+  // Reviews
+  async getProductReviews(productId: number, limit = 10): Promise<Review[]> {
+    return await db
       .select()
-      .from(orders)
-      .where(eq(orders.userId, userId))
-      .orderBy(desc(orders.createdAt));
-
-    const ordersWithItems = await Promise.all(
-      userOrders.map(async (order) => {
-        const items = await db
-          .select({
-            orderItem: orderItems,
-            product: products,
-          })
-          .from(orderItems)
-          .leftJoin(products, eq(orderItems.productId, products.id))
-          .where(eq(orderItems.orderId, order.id));
-
-        return {
-          ...order,
-          items: items.map(item => ({
-            ...item.orderItem,
-            product: item.product!,
-          })),
-        };
-      })
-    );
-
-    return ordersWithItems;
-  }
-
-  async getOrder(id: number): Promise<OrderWithItems | undefined> {
-    const [order] = await db.select().from(orders).where(eq(orders.id, id));
-    if (!order) return undefined;
-
-    const items = await db
-      .select({
-        orderItem: orderItems,
-        product: products,
-      })
-      .from(orderItems)
-      .leftJoin(products, eq(orderItems.productId, products.id))
-      .where(eq(orderItems.orderId, id));
-
-    return {
-      ...order,
-      items: items.map(item => ({
-        ...item.orderItem,
-        product: item.product!,
-      })),
-    };
-  }
-
-  async createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<OrderWithItems> {
-    const [newOrder] = await db.insert(orders).values(order).returning();
-
-    const orderItemsWithOrderId = items.map(item => ({
-      ...item,
-      orderId: newOrder.id,
-    }));
-
-    const newOrderItems = await db
-      .insert(orderItems)
-      .values(orderItemsWithOrderId)
-      .returning();
-
-    // Get products for the order items
-    const productIds = newOrderItems.map(item => item.productId);
-    const orderProducts = await db
-      .select()
-      .from(products)
-      .where(inArray(products.id, productIds));
-
-    return {
-      ...newOrder,
-      items: newOrderItems.map(item => ({
-        ...item,
-        product: orderProducts.find(p => p.id === item.productId)!,
-      })),
-    };
-  }
-
-  async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
-    const [updatedOrder] = await db
-      .update(orders)
-      .set({ status, updatedAt: new Date() })
-      .where(eq(orders.id, id))
-      .returning();
-    return updatedOrder;
-  }
-
-  // Review operations
-  async getProductReviews(productId: number): Promise<(Review & { user: User })[]> {
-    const results = await db
-      .select({
-        review: reviews,
-        user: users,
-      })
       .from(reviews)
-      .leftJoin(users, eq(reviews.userId, users.id))
-      .where(and(eq(reviews.productId, productId), eq(reviews.isActive, true)))
-      .orderBy(desc(reviews.createdAt));
-
-    return results.map(result => ({
-      ...result.review,
-      user: result.user!,
-    }));
+      .where(eq(reviews.productId, productId))
+      .orderBy(desc(reviews.createdAt))
+      .limit(limit);
   }
 
   async createReview(review: InsertReview): Promise<Review> {
     const [newReview] = await db.insert(reviews).values(review).returning();
-
+    
     // Update product rating
     await this.updateProductRating(review.productId);
-
+    
     return newReview;
   }
 
   async updateProductRating(productId: number): Promise<void> {
-    const [result] = await db
+    const result = await db
       .select({
-        averageRating: sql<number>`AVG(${reviews.rating})`,
+        avgRating: sql<number>`AVG(${reviews.rating})`,
         reviewCount: sql<number>`COUNT(*)`,
       })
       .from(reviews)
-      .where(and(eq(reviews.productId, productId), eq(reviews.isActive, true)));
+      .where(eq(reviews.productId, productId));
 
-    if (result) {
+    if (result[0]) {
       await db
         .update(products)
         .set({
-          averageRating: result.averageRating?.toString() || "0",
-          reviewCount: result.reviewCount || 0,
+          rating: result[0].avgRating.toFixed(2),
+          reviewCount: result[0].reviewCount,
+          updatedAt: new Date(),
         })
         .where(eq(products.id, productId));
     }
+  }
+
+  // Newsletter
+  async subscribeToNewsletter(subscriber: InsertNewsletterSubscriber): Promise<NewsletterSubscriber> {
+    const [newSubscriber] = await db
+      .insert(newsletterSubscribers)
+      .values(subscriber)
+      .onConflictDoUpdate({
+        target: newsletterSubscribers.email,
+        set: { subscribed: true, subscribedAt: new Date() },
+      })
+      .returning();
+    return newSubscriber;
+  }
+
+  async unsubscribeFromNewsletter(email: string): Promise<void> {
+    await db
+      .update(newsletterSubscribers)
+      .set({ subscribed: false })
+      .where(eq(newsletterSubscribers.email, email));
+  }
+
+  // Orders
+  async createOrder(order: InsertOrder): Promise<Order> {
+    const [newOrder] = await db.insert(orders).values(order).returning();
+    return newOrder;
+  }
+
+  async getOrder(id: number): Promise<Order | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    return order;
+  }
+
+  async getOrderByNumber(orderNumber: string): Promise<Order | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.orderNumber, orderNumber));
+    return order;
+  }
+
+  async updateOrderStatus(id: number, status: string): Promise<Order> {
+    const [updated] = await db
+      .update(orders)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(orders.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Search
+  async searchProducts(query: string): Promise<Product[]> {
+    return await db
+      .select()
+      .from(products)
+      .where(
+        and(
+          eq(products.inStock, true),
+          or(
+            like(products.name, `%${query}%`),
+            like(products.description, `%${query}%`),
+            like(products.scent, `%${query}%`),
+            like(products.category, `%${query}%`)
+          )
+        )
+      )
+      .orderBy(desc(products.featured), desc(products.rating))
+      .limit(20);
   }
 }
 

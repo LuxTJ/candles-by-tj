@@ -1,55 +1,52 @@
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { Product, ProductVariant } from "@shared/schema";
 import Header from "@/components/Header";
+import CartSidebar from "@/components/CartSidebar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Star, Heart, Minus, Plus, ShoppingCart, Truck, RefreshCw, Shield } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import { Star, Heart, Minus, Plus, Leaf, Clock, Truck } from "lucide-react";
 import { useState } from "react";
+import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ProductPage() {
-  const params = useParams();
-  const slug = params.slug;
-  const { toast } = useToast();
+  const { id } = useParams<{ id: string }>();
+  const productId = parseInt(id || "0");
   const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState("medium");
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const { addToCart } = useCart();
+  const { toast } = useToast();
 
-  const { data: product, isLoading, error } = useQuery({
-    queryKey: [`/api/products/${slug}`],
-    enabled: !!slug,
+  const { data: product, isLoading } = useQuery<Product & { variants: ProductVariant[] }>({
+    queryKey: [`/api/products/${productId}`],
+    enabled: !!productId,
   });
 
   const { data: reviews } = useQuery({
-    queryKey: [`/api/products/${product?.id}/reviews`],
-    enabled: !!product?.id,
-  });
-
-  const { data: rating } = useQuery({
-    queryKey: [`/api/products/${product?.id}/rating`],
-    enabled: !!product?.id,
+    queryKey: [`/api/products/${productId}/reviews`],
+    enabled: !!productId,
   });
 
   const handleAddToCart = async () => {
+    if (!product) return;
+
     try {
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          productId: product.id,
-          quantity,
-        }),
+      await addToCart({
+        productId: product.id,
+        quantity,
+        selectedVariants,
       });
 
-      if (response.ok) {
-        toast({
-          title: "Added to cart!",
-          description: `${quantity} ${product.name}${quantity > 1 ? 's' : ''} added to your cart.`,
-        });
-      } else {
-        throw new Error("Failed to add to cart");
-      }
+      toast({
+        title: "Added to cart!",
+        description: `${product.name} has been added to your cart.`,
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -61,61 +58,80 @@ export default function ProductPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-warm-50 dark:bg-slate-900">
         <Header />
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (error || !product) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-foreground mb-4">Product Not Found</h1>
-            <p className="text-muted-foreground">The product you're looking for doesn't exist.</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <div className="space-y-4">
+              <Skeleton className="aspect-square w-full rounded-xl" />
+              <div className="flex space-x-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="w-16 h-16 rounded-lg" />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-6">
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-12 w-32" />
+            </div>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
-  const salePrice = product.salePrice ? parseFloat(product.salePrice) : null;
-  const regularPrice = parseFloat(product.price);
-  const discount = salePrice ? Math.round(((regularPrice - salePrice) / regularPrice) * 100) : 0;
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-warm-50 dark:bg-slate-900">
+        <Header />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Product not found</h1>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const images = [product.imageUrl, ...(product.images || [])];
+  const discount = product.compareAtPrice ? 
+    Math.round(((parseFloat(product.compareAtPrice) - parseFloat(product.price)) / parseFloat(product.compareAtPrice)) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-warm-50 dark:bg-slate-900">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Product Images */}
           <div className="space-y-4">
-            <div className="aspect-square rounded-2xl overflow-hidden bg-muted">
-              <img
-                src={product.imageUrl || "https://images.unsplash.com/photo-1602874801006-47f0a17605f7?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=600"}
+            <div className="aspect-square rounded-xl overflow-hidden bg-white dark:bg-slate-800">
+              <img 
+                src={images[selectedImageIndex]} 
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
             </div>
-            
-            {/* Thumbnail Gallery */}
-            {product.imageGallery && product.imageGallery.length > 0 && (
+            {images.length > 1 && (
               <div className="flex space-x-2">
-                {product.imageGallery.slice(0, 4).map((image, index) => (
-                  <img
+                {images.map((image, index) => (
+                  <button
                     key={index}
-                    src={image}
-                    alt={`${product.name} view ${index + 1}`}
-                    className="w-20 h-20 rounded-lg object-cover cursor-pointer border-2 hover:border-primary transition-colors"
-                  />
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                      selectedImageIndex === index 
+                        ? "border-primary" 
+                        : "border-transparent hover:border-gray-300"
+                    }`}
+                  >
+                    <img 
+                      src={image} 
+                      alt={`${product.name} view ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
                 ))}
               </div>
             )}
@@ -124,107 +140,123 @@ export default function ProductPage() {
           {/* Product Details */}
           <div className="space-y-6">
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                {product.isFeatured && (
-                  <Badge variant="secondary">Bestseller</Badge>
-                )}
-                {salePrice && (
-                  <Badge variant="destructive">{discount}% OFF</Badge>
-                )}
+              <div className="flex items-center mb-2">
+                <div className="flex text-yellow-400 mr-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star 
+                      key={i} 
+                      className={`w-5 h-5 ${
+                        i < Math.floor(parseFloat(product.rating || "0")) 
+                          ? "fill-current" 
+                          : ""
+                      }`} 
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  ({product.reviewCount} reviews)
+                </span>
               </div>
               
-              <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
                 {product.name}
               </h1>
               
-              {rating && (
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="flex">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-5 h-5 ${
-                          i < Math.floor(rating.rating)
-                            ? "text-yellow-400 fill-current"
-                            : "text-gray-300"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    ({rating.count} reviews)
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center space-x-3 mb-4">
                 <span className="text-3xl font-bold text-primary">
-                  ${salePrice || regularPrice}
+                  ${parseFloat(product.price).toFixed(2)}
                 </span>
-                {salePrice && (
-                  <span className="text-xl text-muted-foreground line-through">
-                    ${regularPrice}
-                  </span>
+                {product.compareAtPrice && (
+                  <>
+                    <span className="text-lg text-gray-500 dark:text-gray-400 line-through">
+                      ${parseFloat(product.compareAtPrice).toFixed(2)}
+                    </span>
+                    <Badge variant="destructive">
+                      {discount}% OFF
+                    </Badge>
+                  </>
                 )}
               </div>
+
+              <Badge variant="secondary" className="bg-primary/10 text-primary">
+                {product.category}
+              </Badge>
             </div>
 
             <div>
-              <p className="text-muted-foreground leading-relaxed">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Description</h3>
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                 {product.description}
               </p>
             </div>
 
             {/* Product Details */}
-            <div className="grid grid-cols-2 gap-4 py-6 border-y">
+            <div className="space-y-3">
               {product.scent && (
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">Scent</h3>
-                  <p className="text-muted-foreground">{product.scent}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Scent:</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{product.scent}</span>
                 </div>
               )}
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Size:</span>
+                <span className="font-medium text-gray-900 dark:text-white">{product.size}</span>
+              </div>
               {product.burnTime && (
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">Burn Time</h3>
-                  <p className="text-muted-foreground">{product.burnTime}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Burn Time:</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{product.burnTime} hours</span>
                 </div>
               )}
-              {product.waxType && (
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">Wax Type</h3>
-                  <p className="text-muted-foreground">{product.waxType}</p>
-                </div>
-              )}
-              {product.size && (
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">Size</h3>
-                  <p className="text-muted-foreground">{product.size}</p>
+              {product.weight && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Weight:</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{product.weight}</span>
                 </div>
               )}
             </div>
 
-            {/* Size Options (if applicable) */}
-            <div>
-              <h3 className="font-semibold text-foreground mb-3">Size</h3>
-              <div className="flex gap-3">
-                {["small", "medium", "large"].map((size) => (
-                  <Button
-                    key={size}
-                    variant={selectedSize === size ? "default" : "outline"}
-                    onClick={() => setSelectedSize(size)}
-                    className="capitalize"
-                  >
-                    {size}
-                  </Button>
+            {/* Variants */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="space-y-4">
+                {Object.entries(
+                  product.variants.reduce((acc, variant) => {
+                    if (!acc[variant.type]) acc[variant.type] = [];
+                    acc[variant.type].push(variant);
+                    return acc;
+                  }, {} as Record<string, ProductVariant[]>)
+                ).map(([type, variants]) => (
+                  <div key={type}>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 capitalize">
+                      {type}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {variants.map((variant) => (
+                        <Button
+                          key={variant.id}
+                          variant={selectedVariants[type] === variant.value ? "default" : "outline"}
+                          onClick={() => setSelectedVariants(prev => ({ ...prev, [type]: variant.value }))}
+                          className={selectedVariants[type] === variant.value ? "bg-primary text-white" : ""}
+                        >
+                          {variant.name}
+                          {parseFloat(variant.priceAdjustment || "0") > 0 && (
+                            <span className="ml-1">
+                              (+${parseFloat(variant.priceAdjustment).toFixed(2)})
+                            </span>
+                          )}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
-            </div>
+            )}
 
-            {/* Quantity Selector */}
+            {/* Quantity */}
             <div>
-              <h3 className="font-semibold text-foreground mb-3">Quantity</h3>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center border rounded-lg">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Quantity</h3>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -233,7 +265,7 @@ export default function ProductPage() {
                   >
                     <Minus className="w-4 h-4" />
                   </Button>
-                  <span className="px-4 py-2 min-w-[3rem] text-center font-semibold">
+                  <span className="px-4 py-2 text-gray-900 dark:text-white font-medium">
                     {quantity}
                   </span>
                   <Button
@@ -248,72 +280,80 @@ export default function ProductPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-4">
+            <div className="flex space-x-4">
               <Button 
-                className="flex-1" 
-                size="lg"
                 onClick={handleAddToCart}
+                className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                disabled={!product.inStock}
               >
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                Add to Cart
+                {product.inStock ? "Add to Cart" : "Out of Stock"}
               </Button>
-              <Button variant="outline" size="lg">
+              <Button variant="outline" size="icon">
                 <Heart className="w-5 h-5" />
               </Button>
             </div>
 
             {/* Product Features */}
-            <div className="space-y-3 pt-6 border-t">
-              <div className="flex items-center gap-3">
-                <Truck className="w-5 h-5 text-green-600" />
-                <span className="text-sm text-muted-foreground">Free shipping on orders over $50</span>
+            <Separator />
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <Leaf className="w-5 h-5 text-green-500" />
+                <span className="text-gray-600 dark:text-gray-400">100% Natural Soy Wax</span>
               </div>
-              <div className="flex items-center gap-3">
-                <RefreshCw className="w-5 h-5 text-blue-600" />
-                <span className="text-sm text-muted-foreground">30-day return policy</span>
+              <div className="flex items-center space-x-3">
+                <Clock className="w-5 h-5 text-primary" />
+                <span className="text-gray-600 dark:text-gray-400">
+                  {product.burnTime || "20-60"} Hours Burn Time
+                </span>
               </div>
-              <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-purple-600" />
-                <span className="text-sm text-muted-foreground">100% natural ingredients</span>
+              <div className="flex items-center space-x-3">
+                <Truck className="w-5 h-5 text-blue-500" />
+                <span className="text-gray-600 dark:text-gray-400">Free Shipping on Orders $50+</span>
               </div>
             </div>
+
+            {/* Care Instructions */}
+            {product.careInstructions && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Care Instructions</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  {product.careInstructions}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Reviews Section */}
         {reviews && reviews.length > 0 && (
-          <div className="mt-16 border-t pt-16">
-            <h2 className="text-2xl font-bold text-foreground mb-8">Customer Reviews</h2>
-            <div className="space-y-6">
-              {reviews.slice(0, 3).map((review) => (
-                <div key={review.id} className="bg-card p-6 rounded-lg border">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-4 h-4 ${
-                            i < review.rating
-                              ? "text-yellow-400 fill-current"
-                              : "text-gray-300"
-                          }`}
-                        />
-                      ))}
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Customer Reviews</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {reviews.map((review: any) => (
+                <Card key={review.id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400 mr-2">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} className={`w-4 h-4 ${i < review.rating ? "fill-current" : ""}`} />
+                        ))}
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{review.customerName}</span>
                     </div>
-                    <span className="font-semibold text-foreground">{review.title}</span>
-                  </div>
-                  <p className="text-muted-foreground mb-3">{review.comment}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(review.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
+                    {review.title && (
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{review.title}</h4>
+                    )}
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">{review.comment}</p>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
         )}
-      </main>
+      </div>
 
       <Footer />
+      <CartSidebar />
     </div>
   );
 }
