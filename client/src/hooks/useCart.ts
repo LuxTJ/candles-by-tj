@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Cart, CartItem } from "../../shared/types";
+import { Cart, CartItem } from "@shared/types";
 import { apiRequest } from "@/lib/queryClient";
 
 export function useCart() {

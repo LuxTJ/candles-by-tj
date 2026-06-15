@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Product } from "../../../../shared/schema";
+import { Product } from "@shared/schema";
 
 export default function AdminDashboard() {
   const [, navigate] = useLocation();
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="space-y-2">
                       <Label>Price ($)</Label>
-                      <Input type="number" step="0.01" value={newProduct.price ?? ""} onChange={e => setNewProduct({...newProduct, price: e.target.value})} />
+                      <Input type="number" step="0.01" value={newProduct.price ?? ""} onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value) || 0})} />
                     </div>
                     <div className="space-y-2">
                       <Label>Dimensions</Label>
