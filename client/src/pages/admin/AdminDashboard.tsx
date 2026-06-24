@@ -1,161 +1,58 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
-import { useAdmin } from "@/hooks/useAdmin";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Product } from "@shared/schema";
+import { useAdmin } from "@/lib/adminContext";
+import { useSettings } from "@/lib/siteSettings";
 
 export default function AdminDashboard() {
-  const [, navigate] = useLocation();
-  const { products, orders, createProduct, updateProduct, deleteProduct, uploadImage } = useAdmin();
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState<Partial<Product>>({});
-  const [uploading, setUploading] = useState(false);
+  const { logout } = useAdmin();
+  const { resetSettings } = useSettings();
+  const [, setLocation] = useLocation();
 
-  if (products.error?.message === "Unauthorized") {
-    navigate("/admin/login");
-    return null;
-  }
+  const handleLogout = () => {
+    logout();
+    setLocation("/admin");
+  };
 
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>, setter: (url: string) => void) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    const url = await uploadImage(file);
-    setter(url);
-    setUploading(false);
-  }
+  const cards = [
+    { label: "Products", desc: "Edit names, prices, dimensions & weights", icon: "🕯️", path: "/admin/products" },
+    { label: "Appearance", desc: "Change colors, hero image & banner", icon: "🎨", path: "/admin/appearance" },
+    { label: "Content", desc: "Edit page text, footer & images", icon: "📝", path: "/admin/content" },
+    { label: "Messages", desc: "View contact form submissions", icon: "💬", path: "/admin/messages" },
+  ];
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <Button variant="outline" onClick={() => navigate("/")}>View Store</Button>
+    <div style={{ minHeight: "100vh", background: "#f9f9f9" }}>
+      <div style={{ background: "#e8a0b0", padding: "1rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <img src="/images/logo.jpg" alt="Logo" style={{ width: "40px", height: "40px", objectFit: "contain" }} />
+          <span style={{ fontWeight: 700, fontSize: "18px" }}>Admin Dashboard</span>
+        </div>
+        <div style={{ display: "flex", gap: "12px" }}>
+          <button onClick={() => setLocation("/")} style={{ background: "white", color: "#111", border: "none", borderRadius: "9999px", padding: "8px 16px", fontSize: "13px", cursor: "pointer" }}>View Site</button>
+          <button onClick={handleLogout} style={{ background: "#111", color: "white", border: "none", borderRadius: "9999px", padding: "8px 16px", fontSize: "13px", cursor: "pointer" }}>Log Out</button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: "900px", margin: "3rem auto", padding: "0 2rem" }}>
+        <h2 style={{ fontSize: "24px", fontWeight: 700, marginBottom: "0.5rem" }}>Welcome back!</h2>
+        <p style={{ color: "#666", marginBottom: "2rem" }}>What would you like to manage today?</p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1.5rem" }}>
+          {cards.map(({ label, desc, icon, path }) => (
+            <button key={label} onClick={() => setLocation(path)} style={{ background: "white", border: "2px solid #e8a0b0", borderRadius: "12px", padding: "2rem", textAlign: "left", cursor: "pointer", transition: "box-shadow 0.2s" }}
+              onMouseOver={(e) => (e.currentTarget.style.boxShadow = "0 4px 16px rgba(232,160,176,0.4)")}
+              onMouseOut={(e) => (e.currentTarget.style.boxShadow = "none")}>
+              <div style={{ fontSize: "36px", marginBottom: "12px" }}>{icon}</div>
+              <div style={{ fontSize: "18px", fontWeight: 700, marginBottom: "6px" }}>{label}</div>
+              <div style={{ fontSize: "13px", color: "#666" }}>{desc}</div>
+            </button>
+          ))}
         </div>
 
-        <Tabs defaultValue="products">
-          <TabsList>
-            <TabsTrigger value="products">Products ({products.data?.length ?? 0})</TabsTrigger>
-            <TabsTrigger value="orders">Orders ({orders.data?.length ?? 0})</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="products" className="space-y-4">
-            <div className="flex justify-end">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button>+ Add Product</Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                  <DialogHeader><DialogTitle>Add New Product</DialogTitle></DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Name</Label>
-                      <Input value={newProduct.name ?? ""} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Price ($)</Label>
-                      <Input type="number" step="0.01" value={newProduct.price ?? ""} onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value) || 0})} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Dimensions</Label>
-                      <Input value={newProduct.dimensions ?? ""} onChange={e => setNewProduct({...newProduct, dimensions: e.target.value})} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Weight</Label>
-                      <Input value={newProduct.weight ?? ""} onChange={e => setNewProduct({...newProduct, weight: e.target.value})} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Product Image</Label>
-                      <Input type="file" accept="image/*" onChange={e => handleImageUpload(e, url => setNewProduct({...newProduct, imageUrl: url}))} />
-                      {uploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
-                      {newProduct.imageUrl && <img src={newProduct.imageUrl} className="w-24 h-24 object-cover rounded" />}
-                    </div>
-                    <Button className="w-full" onClick={() => {
-                      createProduct.mutate({
-                        ...newProduct,
-                        slug: newProduct.name?.toLowerCase().replace(/\s+/g, "-") ?? "",
-                        scents: ["Jasmine","Vanilla","Rain Water","Fresh Linen","Star Gazer Lily","Cherry Blossom","Honeysuckle","Zippity Do Dah"],
-                        colors: ["White","Yellow","Blue","Red","Purple","Orange","Pink","Aquamarine","Bright Green"],
-                        inStock: true,
-                      });
-                    }}>
-                      Save Product
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Image</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.data?.map(product => (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <img src={product.imageUrl} alt={product.name} className="w-12 h-12 object-cover rounded" />
-                    </TableCell>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>${product.price}</TableCell>
-                    <TableCell>
-                      <Badge variant={product.inStock ? "default" : "secondary"}>
-                        {product.inStock ? "In Stock" : "Out of Stock"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="space-x-2">
-                      <Button size="sm" variant="outline" onClick={() => setEditingProduct(product)}>Edit</Button>
-                      <Button size="sm" variant="destructive" onClick={() => deleteProduct.mutate(product.id)}>Delete</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TabsContent>
-
-          <TabsContent value="orders">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.data?.map((order: any) => (
-                  <TableRow key={order.id}>
-                    <TableCell>#{order.id}</TableCell>
-                    <TableCell>
-                      <div>{order.customerName}</div>
-                      <div className="text-sm text-muted-foreground">{order.customerEmail}</div>
-                    </TableCell>
-                    <TableCell>${order.total}</TableCell>
-                    <TableCell className="capitalize">{order.paymentMethod}</TableCell>
-                    <TableCell><Badge>{order.status}</Badge></TableCell>
-                    <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TabsContent>
-        </Tabs>
+        <div style={{ marginTop: "2rem", textAlign: "right" }}>
+          <button onClick={() => { if (confirm("Reset all settings to defaults?")) resetSettings(); }} style={{ background: "none", border: "1px solid #ddd", borderRadius: "8px", padding: "8px 16px", fontSize: "12px", color: "#999", cursor: "pointer" }}>
+            Reset All Settings to Default
+          </button>
+        </div>
       </div>
     </div>
   );

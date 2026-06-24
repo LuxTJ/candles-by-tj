@@ -1,79 +1,86 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useCart } from "@/hooks/useCart";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ShoppingBag, Menu } from "lucide-react";
-import logo from "/logo.png";
+import { useCart } from "@/lib/cartContext";
 
-interface HeaderProps {
-  onCartClick?: () => void;
-}
-
-export function Header({ onCartClick }: HeaderProps) {
+export function Header() {
   const [location] = useLocation();
   const { totalItems } = useCart();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navigation = [
-    { name: "Shop", href: "/#products" },
-    { name: "Good To Know", href: "/good-to-know" },
-    { name: "Meet The Maker", href: "/meet-the-maker" },
-    { name: "Contact", href: "/contact" },
+  const nav = [
+    { label: "Shop", href: "/" },
+    { label: "Good To Know", href: "/good-to-know" },
+    { label: "Meet The Maker", href: "/meet-the-maker" },
+    { label: "Contact", href: "/contact" },
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <Link href="/">
-            <div className="flex items-center space-x-2 cursor-pointer">
-              <img src={logo} alt="Candles by TJ" className="w-10 h-10 rounded-full" />
-              <span className="text-xl font-bold text-foreground hidden sm:block">Candles by TJ</span>
-            </div>
-          </Link>
+    <header style={{
+      position: "sticky",
+      top: 0,
+      zIndex: 50,
+      background: "white",
+      borderBottom: "1px solid #111",
+      padding: "0 2rem",
+    }}>
+      <div style={{
+        maxWidth: "1200px",
+        margin: "0 auto",
+        height: "80px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}>
+        <Link href="/">
+          <img
+            src="/images/logo.jpg"
+            alt="Candles by TJ"
+            style={{ width: "72px", height: "72px", cursor: "pointer", objectFit: "contain" }}
+          />
+        </Link>
 
-          <nav className="hidden md:flex items-center space-x-8">
-            {navigation.map((item) => (
-              <Link key={item.name} href={item.href}>
-                <span className={`text-sm font-medium transition-colors hover:text-primary cursor-pointer ${location === item.href ? "text-primary" : "text-muted-foreground"}`}>
-                  {item.name}
-                </span>
-              </Link>
-            ))}
-          </nav>
+        <nav style={{ display: "flex", gap: "2rem" }}>
+          {nav.map(({ label, href }) => (
+            <Link key={href} href={href}>
+              <span style={{
+                fontSize: "14px",
+                color: location === href ? "#e8a0b0" : "#333",
+                textDecoration: location === href ? "underline" : "none",
+                cursor: "pointer",
+                fontWeight: location === href ? 500 : 400,
+              }}>
+                {label}
+              </span>
+            </Link>
+          ))}
+        </nav>
 
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" className="relative" onClick={onCartClick}>
-              <ShoppingBag className="w-5 h-5" />
-              {totalItems > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                  {totalItems}
-                </Badge>
-              )}
-            </Button>
-
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
-                  <Menu className="w-5 h-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-72">
-                <nav className="flex flex-col space-y-4 mt-8">
-                  {navigation.map((item) => (
-                    <Link key={item.name} href={item.href}>
-                      <span className="block py-2 text-lg font-medium hover:text-primary cursor-pointer" onClick={() => setMobileMenuOpen(false)}>
-                        {item.name}
-                      </span>
-                    </Link>
-                  ))}
-                </nav>
-              </SheetContent>
-            </Sheet>
+        <Link href="/cart">
+          <div style={{ position: "relative", cursor: "pointer" }}>
+            <img
+              src="/images/cart-icon.png"
+              alt="Cart"
+              style={{ width: "48px", height: "48px" }}
+            />
+            {totalItems > 0 && (
+              <span style={{
+                position: "absolute",
+                top: "-6px",
+                right: "-6px",
+                background: "#e8a0b0",
+                color: "white",
+                borderRadius: "50%",
+                width: "18px",
+                height: "18px",
+                fontSize: "11px",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                {totalItems}
+              </span>
+            )}
           </div>
-        </div>
+        </Link>
       </div>
     </header>
   );

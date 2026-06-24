@@ -15,19 +15,18 @@ function cors(body: string, status = 200) {
 export const onRequestOptions = async () => cors("", 204);
 
 export const onRequestGet: import("@cloudflare/workers-types").PagesFunction<Env> = async ({ env }) => {
-  const { results } = await env.DB.prepare("SELECT * FROM products ORDER BY id").all();
-  const products = results.map((p: any) => ({
-    ...p,
-    scents: p.scents.split(","),
-    colors: p.colors.split(","),
-  }));
-  return cors(JSON.stringify(products));
+  const { results } = await env.DB.prepare("SELECT key, value FROM settings").all();
+  const settings: Record<string, string> = {};
+  for (const row of results as any[]) settings[row.key] = row.value;
+  return cors(JSON.stringify(settings));
 };
 
 export const onRequestPut: import("@cloudflare/workers-types").PagesFunction<Env> = async ({ env, request }) => {
-  const { id, name, price, dimensions, weight } = await request.json() as any;
-  await env.DB.prepare(
-    "UPDATE products SET name=?, price=?, dimensions=?, weight=? WHERE id=?"
-  ).bind(name, price, dimensions, weight, id).run();
+  const updates = await request.json() as Record<string, string>;
+  for (const [key, value] of Object.entries(updates)) {
+    await env.DB.prepare(
+      "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+    ).bind(key, value).run();
+  }
   return cors(JSON.stringify({ success: true }));
 };

@@ -17,11 +17,15 @@ export default function Contact() {
     const form = e.currentTarget;
     const data = new FormData(form);
 
-    // Submit to Formspree (free contact form service — sign up at formspree.io)
-    const res = await fetch("https://formspree.io/f/YOUR_FORM_ID", {
+    const res = await fetch("/api/messages", {
       method: "POST",
-      body: data,
-      headers: { Accept: "application/json" },
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: data.get("name"),
+        email: data.get("email"),
+        subject: data.get("subject"),
+        message: data.get("message"),
+      }),
     });
 
     if (res.ok) {
@@ -60,9 +64,24 @@ export default function Contact() {
             <Label htmlFor="message">Message</Label>
             <Textarea id="message" name="message" required rows={5} placeholder="Tell us how we can help..." />
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              background: "#e8a0b0",
+              color: "#111",
+              border: "none",
+              borderRadius: "9999px",
+              padding: "9px",
+              fontSize: "15px",
+              fontWeight: 500,
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
             {loading ? "Sending..." : "Send Message"}
-          </Button>
+          </button>
         </form>
       </main>
 
