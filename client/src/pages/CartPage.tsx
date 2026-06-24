@@ -1,10 +1,11 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { useCart } from "@/lib/cartContext";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, totalPrice, clearCart } = useCart();
+  const [, setLocation] = useLocation();
 
   return (
     <div style={{ minHeight: "100vh", background: "white" }}>
@@ -81,18 +82,20 @@ export default function CartPage() {
                 <span style={{ fontSize: "18px", fontWeight: 600 }}>Total</span>
                 <span style={{ fontSize: "18px", fontWeight: 600 }}>${totalPrice.toFixed(2)}</span>
               </div>
-              <button style={{
-                width: "100%",
-                background: "#e8a0b0",
-                color: "#111",
-                border: "none",
-                borderRadius: "9999px",
-                padding: "14px",
-                fontSize: "15px",
-                fontWeight: 500,
-                cursor: "pointer",
-                marginBottom: "12px",
-              }}>
+              <button
+                onClick={() => setLocation("/checkout")}
+                style={{
+                  width: "100%",
+                  background: "#e8a0b0",
+                  color: "#111",
+                  border: "none",
+                  borderRadius: "9999px",
+                  padding: "14px",
+                  fontSize: "15px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  marginBottom: "12px",
+                }}>
                 Proceed to Checkout
               </button>
               <Link href="/">

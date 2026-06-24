@@ -4,6 +4,8 @@ import MeetTheMaker from "@/pages/MeetTheMaker";
 import GoodToKnow from "@/pages/GoodToKnow";
 import Contact from "@/pages/Contact";
 import CartPage from "@/pages/CartPage";
+import CheckoutPage from "@/pages/CheckoutPage";
+import OrderSuccessPage from "@/pages/OrderSuccessPage";
 import NotFound from "@/pages/not-found";
 import AdminLogin from "@/pages/admin/AdminLogin";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -29,6 +31,8 @@ export default function App() {
       <Route path="/good-to-know" component={GoodToKnow} />
       <Route path="/contact" component={Contact} />
       <Route path="/cart" component={CartPage} />
+      <Route path="/checkout" component={CheckoutPage} />
+      <Route path="/order-success" component={OrderSuccessPage} />
       <Route path="/admin" component={AdminLogin} />
       <Route path="/admin/dashboard">{() => <ProtectedRoute component={AdminDashboard} />}</Route>
       <Route path="/admin/products">{() => <ProtectedRoute component={AdminProducts} />}</Route>

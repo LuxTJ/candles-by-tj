@@ -1,41 +1,50 @@
 import { PagesFunction } from "@cloudflare/workers-types";
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
-import { orders } from "../../shared/schema";
 
-interface Env {
-  DATABASE_URL: string;
-}
+interface Env { DB: D1Database; }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const sql = neon(env.DATABASE_URL);
-  const db = drizzle(sql);
-
-  const body = (await request.json()) as {
+  const body = await request.json() as {
     customerName: string;
     customerEmail: string;
-    items: any[];
-    subtotal: string;
-    total: string;
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+    shippingMethod: string;
+    shippingCost: number;
+    items: Array<{ productName: string; price: number; quantity: number; scent: string; color: string }>;
+    subtotal: number;
+    total: number;
     paymentMethod: string;
     paymentId: string;
-    shippingAddress: any;
   };
 
-  const [order] = await db
-    .insert(orders)
-    .values({
-      customerName: body.customerName,
-      customerEmail: body.customerEmail,
-      items: body.items,
-      subtotal: parseFloat(body.subtotal),
-      total: parseFloat(body.total),
-      paymentMethod: body.paymentMethod,
-      paymentId: body.paymentId,
-      shippingAddress: body.shippingAddress,
-      status: "paid",
-    })
-    .returning();
+  await env.DB.prepare(`
+    INSERT INTO orders (customer_name, customer_email, address, city, state, zip, country,
+      shipping_method, shipping_cost, items, subtotal, total, payment_method, payment_id, status)
+    VALUES (?, ?, ?, ?, ?, ?, 'US', ?, ?, ?, ?, ?, ?, ?, 'paid')
+  `).bind(
+    body.customerName,
+    body.customerEmail,
+    body.address,
+    body.city,
+    body.state,
+    body.zip,
+    body.shippingMethod,
+    body.shippingCost,
+    JSON.stringify(body.items),
+    body.subtotal,
+    body.total,
+    body.paymentMethod,
+    body.paymentId,
+  ).run();
 
-  return Response.json(order, { status: 201 });
+  return Response.json({ success: true });
+};
+
+export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
+  const result = await env.DB.prepare(
+    "SELECT * FROM orders ORDER BY created_at DESC"
+  ).all();
+  return Response.json(result.results);
 };
